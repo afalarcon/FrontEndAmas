@@ -54,7 +54,7 @@ jobs:
     env:
       VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
       VPS_FRONT_DIR: ${{ vars.VPS_FRONT_DIR || '/opt/amas-front' }}
-      AMAS_API_BASE_URL: ${{ vars.AMAS_API_BASE_URL || 'https://api.amaslohaceposible.cloud/api/v1' }}
+      AMAS_API_BASE_URL: ${{ vars.AMAS_API_BASE_URL || 'https://apinet.amaslohaceposible.cloud/api/v1' }}
 
     steps:
       - name: Checkout
