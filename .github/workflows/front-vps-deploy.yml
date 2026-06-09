@@ -111,7 +111,7 @@ jobs:
           AMAS_API_BASE_URL=$AMAS_API_BASE_URL
           EOF
           chmod 600 '$VPS_FRONT_DIR/.env'"
-          
+
       - name: Deploy container
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
