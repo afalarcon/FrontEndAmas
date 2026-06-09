@@ -90,7 +90,6 @@ jobs:
           rsync -az --delete \
             --exclude '.git/' \
             --exclude '.angular/' \
-            --exclude 'api/' \
             --exclude 'dist/' \
             --exclude 'node_modules/' \
             --exclude 'src/images/' \

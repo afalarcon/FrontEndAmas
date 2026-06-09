@@ -11,18 +11,10 @@
 npm-debug.log
 yarn-error.log
 
-# .NET
-/.dotnet-home
-**/bin/
-**/obj/
 /.env
 /.env.*
 !.env.example
-api/.env
-api/.env.*
-!api/.env.example
-api/storage/
-api/Amas.Api/storage/
+/.dotnet-home/
 
 # IDEs and editors
 .idea/

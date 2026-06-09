@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="Amas.Api/Amas.Api.csproj" />
-  <Project Path="Amas.Application/Amas.Application.csproj" />
-  <Project Path="Amas.Domain/Amas.Domain.csproj" />
-  <Project Path="Amas.Infrastructure/Amas.Infrastructure.csproj" />
-</Solution>

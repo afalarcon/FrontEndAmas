@@ -3,8 +3,6 @@ dist
 .angular
 .git
 .github
-api
-ApiAmas-publish
 outputs
 coverage
 .DS_Store
