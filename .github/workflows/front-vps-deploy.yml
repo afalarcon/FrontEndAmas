@@ -107,8 +107,11 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/amas_vps -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-            "printf '%s\n' 'AMAS_API_BASE_URL=$AMAS_API_BASE_URL' > '$VPS_FRONT_DIR/.env' && chmod 600 '$VPS_FRONT_DIR/.env'"
-
+            "cat > '$VPS_FRONT_DIR/.env' <<EOF
+          AMAS_API_BASE_URL=$AMAS_API_BASE_URL
+          EOF
+          chmod 600 '$VPS_FRONT_DIR/.env'"
+          
       - name: Deploy container
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
