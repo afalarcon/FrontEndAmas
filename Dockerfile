@@ -17,8 +17,6 @@ COPY --from=build /app/dist/landing-amas/browser /usr/share/nginx/html
 RUN printf '%s\n' \
   '#!/bin/sh' \
   'set -eu' \
-  'cat > /usr/share/nginx/html/runtime-config.js <<EOF' \
-  'window.__AMAS_API_BASE_URL__ = "${AMAS_API_BASE_URL}";' \
-  'EOF' \
+  'echo "window.__AMAS_API_BASE_URL__=\"${AMAS_API_BASE_URL}\";" > /usr/share/nginx/html/runtime-config.js' \
   > /docker-entrypoint.d/99-amas-runtime-config.sh \
   && chmod +x /docker-entrypoint.d/99-amas-runtime-config.sh
