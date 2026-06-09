@@ -11,6 +11,19 @@
 npm-debug.log
 yarn-error.log
 
+# .NET
+/.dotnet-home
+**/bin/
+**/obj/
+/.env
+/.env.*
+!.env.example
+api/.env
+api/.env.*
+!api/.env.example
+api/storage/
+api/Amas.Api/storage/
+
 # IDEs and editors
 .idea/
 .project
@@ -33,6 +46,9 @@ yarn-error.log
 .sass-cache/
 /connect.lock
 /coverage
+/outputs
+/ApiAmas-publish/
+/src/images/
 /libpeerconnection.log
 testem.log
 /typings

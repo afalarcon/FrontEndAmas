@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+/storage/
+/Amas.Api/storage/
+**/bin/
+**/obj/
+TestResults/
+coverage/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.log
+Dockerfile.*
+docker-compose*.yml

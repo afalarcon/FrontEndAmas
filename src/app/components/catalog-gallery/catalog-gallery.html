@@ -1,0 +1,76 @@
+<section class="catalog-gallery" [class.catalog-gallery--filtered]="showFilter">
+  @if (showFilter) {
+    <div class="gallery-toolbar">
+      <div>
+        <span class="eyebrow">Catalogo</span>
+        <h2>{{ currentCategoryName }}</h2>
+      </div>
+
+      <label class="category-filter">
+        <span>Categoria</span>
+        <select [(ngModel)]="selectedSlug" [disabled]="isLoading">
+          <option value="all">Todos</option>
+          @for (category of categories; track category.id) {
+            <option [value]="category.slug">{{ category.name }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  }
+
+  @if (isLoading) {
+    <div class="gallery-state">Cargando imagenes...</div>
+  } @else if (errorMessage) {
+    <div class="gallery-state gallery-state--error">{{ errorMessage }}</div>
+  } @else if (!visibleImages.length) {
+    <div class="gallery-state">
+      Aun no hay imagenes publicadas para esta categoria.
+    </div>
+  } @else {
+    <div class="masonry-grid">
+      @for (item of visibleImages; track item.image.id; let index = $index) {
+        <article class="masonry-item" [class.tall]="index % 4 === 0" [class.medium]="index % 4 === 2">
+          <button class="image-open" type="button" (click)="openImage(item)" [attr.aria-label]="'Ampliar ' + imageTitle(item)">
+            <img [src]="item.sourceUrl" [alt]="imageTitle(item)" loading="lazy" />
+          </button>
+
+          <div class="overlay">
+            <div class="content">
+              <span>{{ item.categoryName }}</span>
+              <h3>{{ imageTitle(item) }}</h3>
+
+              <a class="whatsapp-btn" [href]="whatsappUrl(item)" target="_blank" rel="noopener">
+                Quiero uno similar
+              </a>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+@if (selectedImage) {
+  <div class="image-modal" role="dialog" aria-modal="true" (click)="closeImage()">
+    <div class="image-modal__panel" (click)="$event.stopPropagation()">
+      <button class="image-modal__close" type="button" aria-label="Cerrar imagen" (click)="closeImage()">
+        x
+      </button>
+
+      <div class="image-modal__media">
+        <img [src]="selectedImage.sourceUrl" [alt]="imageTitle(selectedImage)" />
+      </div>
+
+      <div class="image-modal__content">
+        <div>
+          <span>{{ selectedImage.categoryName }}</span>
+          <h3>{{ imageTitle(selectedImage) }}</h3>
+        </div>
+
+        <a class="modal-whatsapp-btn" [href]="whatsappUrl(selectedImage)" target="_blank" rel="noopener">
+          Solicitar asesoria por WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,43 @@
+<main class="adminLogin">
+  <section class="loginPanel">
+    <div class="brandMark">AMAS</div>
+
+    <div class="loginCopy">
+      <span>Administración</span>
+      <h1>Ingresa al panel</h1>
+      <p>Gestiona productos, inventario, imágenes y contenido visible en la landing.</p>
+    </div>
+
+    <form (ngSubmit)="submit()" #loginForm="ngForm" class="loginForm">
+      <label>
+        Correo
+        <input
+          type="email"
+          name="email"
+          [(ngModel)]="email"
+          autocomplete="username"
+          required
+        >
+      </label>
+
+      <label>
+        Contraseña
+        <input
+          type="password"
+          name="password"
+          [(ngModel)]="password"
+          autocomplete="current-password"
+          required
+        >
+      </label>
+
+      @if (error) {
+        <p class="formError">{{ error }}</p>
+      }
+
+      <button type="submit" [disabled]="loginForm.invalid || loading">
+        {{ loading ? 'Ingresando...' : 'Ingresar' }}
+      </button>
+    </form>
+  </section>
+</main>

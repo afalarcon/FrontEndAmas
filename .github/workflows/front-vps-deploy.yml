@@ -1,0 +1,118 @@
+name: Deploy Front to VPS
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'angular.json'
+      - 'package*.json'
+      - 'tsconfig*.json'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'nginx.conf'
+      - 'docker-compose.front.yml'
+      - '.github/workflows/front-vps-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: amas-front-vps
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Front
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc -p tsconfig.app.json --noEmit
+
+      - name: Build
+        run: npm run build -- --no-progress
+
+  deploy:
+    name: Deploy Front
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+
+    env:
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_FRONT_DIR: ${{ vars.VPS_FRONT_DIR || '/opt/amas-front' }}
+      AMAS_API_BASE_URL: ${{ vars.AMAS_API_BASE_URL || 'https://api.amaslohaceposible.cloud/api/v1' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/amas_vps
+          chmod 600 ~/.ssh/amas_vps
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Prepare remote directory
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/amas_vps -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "mkdir -p '$VPS_FRONT_DIR' && docker network inspect traefik_proxy >/dev/null 2>&1 || docker network create traefik_proxy"
+
+      - name: Upload front files
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.angular/' \
+            --exclude 'api/' \
+            --exclude 'dist/' \
+            --exclude 'node_modules/' \
+            --exclude 'src/images/' \
+            --exclude 'outputs/' \
+            --exclude '.DS_Store' \
+            -e "ssh -i ~/.ssh/amas_vps -p $VPS_PORT" \
+            ./ "$VPS_USER@$VPS_HOST:$VPS_FRONT_DIR/"
+
+      - name: Upload front env
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/amas_vps -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "printf '%s\n' 'AMAS_API_BASE_URL=$AMAS_API_BASE_URL' > '$VPS_FRONT_DIR/.env' && chmod 600 '$VPS_FRONT_DIR/.env'"
+
+      - name: Deploy container
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/amas_vps -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "cd '$VPS_FRONT_DIR' && docker compose -f docker-compose.front.yml up -d --build --remove-orphans && docker image prune -f"

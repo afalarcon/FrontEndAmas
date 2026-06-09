@@ -1,0 +1,11 @@
+:host {
+  display: block;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.hero,
+.footer,
+.site-header {
+  width: 100%;
+}

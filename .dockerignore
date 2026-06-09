@@ -1,0 +1,11 @@
+node_modules
+dist
+.angular
+.git
+.github
+api
+ApiAmas-publish
+outputs
+coverage
+.DS_Store
+npm-debug.log

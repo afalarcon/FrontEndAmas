@@ -1,0 +1,65 @@
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 86px;
+  padding: 0 7%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(123, 22, 52, 0.08);
+  box-shadow: 0 8px 30px rgba(80, 20, 40, 0.06);
+
+}
+
+.brand img {
+  width: 125px;
+  display: block;
+}
+
+.nav {
+  display: flex;
+  gap: 34px;
+}
+
+.nav a {
+  color: #4a2630;
+  text-decoration: none;
+  font-weight: 700;
+  position: relative;
+}
+
+.nav a {
+  transition: color .25s ease;
+}
+
+.nav a:hover {
+  color: #ff6f9f;
+}
+.nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  width: 0;
+  height: 2px;
+  background: #c84372;
+  transition: width .3s ease;
+}
+
+.nav a:hover::after {
+  width: 100%;
+}
+
+.header-btn {
+  background: linear-gradient(135deg, #7b1634, #d85d8a);
+  color: white;
+  padding: 13px 25px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 800;
+  box-shadow: 0 12px 25px rgba(200, 67, 114, .28);
+}
+

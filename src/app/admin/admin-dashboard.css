@@ -1,0 +1,792 @@
+.adminShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  background: #f7f4f2;
+  color: #34141f;
+  transition: grid-template-columns .25s ease;
+}
+
+.adminShell.sidebarCollapsed {
+  grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.adminSidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 24px 18px;
+  background: #421225;
+  color: #fff7f2;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.brandMark {
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+
+.sidebarHeader p {
+  margin: 8px 0 0;
+  color: #f1c9d7;
+}
+
+.sidebarNav {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebarNav button,
+.iconButton,
+.refreshButton,
+.primaryButton,
+.ghostButton,
+.rowActions button,
+.userButton,
+.userDropdown button {
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sidebarNav button {
+  min-height: 44px;
+  padding: 12px 14px;
+  color: #fff7f2;
+  text-align: left;
+  background: transparent;
+}
+
+.sidebarNav button.active,
+.sidebarNav button:hover {
+  background: rgba(255,255,255,.13);
+}
+
+.sidebarCollapsed .brandMark,
+.sidebarCollapsed .sidebarHeader p,
+.sidebarCollapsed .sidebarNav span {
+  display: none;
+}
+
+.sidebarCollapsed .sidebarHeader {
+  justify-content: center;
+}
+
+.sidebarCollapsed .sidebarNav button {
+  text-align: center;
+}
+
+.iconButton {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #7b1634;
+  background: #ffd7e5;
+}
+
+.adminMain {
+  padding: 28px;
+}
+
+.adminHeader {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.adminHeader span,
+.panelTitle p,
+.metricsGrid span,
+td small,
+.endpointNote,
+.uploadDrop small {
+  color: #73535f;
+}
+
+.adminHeader > div:first-child > span {
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.adminHeader h1 {
+  margin: 6px 0 0;
+  color: #32111c;
+  font-size: 2.2rem;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refreshButton,
+.primaryButton {
+  padding: 12px 16px;
+  color: white;
+  background: #7b1634;
+}
+
+.refreshButton:disabled,
+.primaryButton:disabled,
+.ghostButton:disabled,
+.iconButton:disabled,
+.rowActions button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+.userMenu {
+  position: relative;
+}
+
+.userButton {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #421225;
+  background: white;
+  border: 1px solid #ead4dc;
+}
+
+.userIcon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: white !important;
+  background: #7b1634;
+  font-weight: 900;
+}
+
+.userDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  background: white;
+  border: 1px solid #ead4dc;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(64, 16, 31, .14);
+  z-index: 20;
+}
+
+.userDropdown strong {
+  color: #32111c;
+  word-break: break-word;
+}
+
+.userDropdown button {
+  padding: 10px 12px;
+  color: #9c1f3c;
+  text-align: left;
+  background: #ffe6ec;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metricsGrid article,
+.workPanel {
+  background: white;
+  border: 1px solid rgba(123, 22, 52, .1);
+  border-radius: 8px;
+  box-shadow: 0 14px 38px rgba(64, 16, 31, .07);
+}
+
+.metricsGrid article {
+  padding: 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.metricsGrid strong {
+  font-size: 2rem;
+  color: #5b1028;
+}
+
+.workPanel {
+  position: relative;
+  padding: 24px;
+}
+
+.workPanel.isBusy .tableWrap {
+  pointer-events: none;
+  opacity: .48;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.panelTitle h2 {
+  margin: 0 0 7px;
+  color: #40101f;
+  font-size: 1.45rem;
+}
+
+.panelTitle p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.roadmap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.roadmap span {
+  padding: 10px 12px;
+  color: #5b1028;
+  background: #fff0f6;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.roadmap .pending {
+  color: #655300;
+  background: #fff3bf;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.panelLoading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  color: #5b1028;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 8px;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid #f3d6e1;
+  border-top-color: #7b1634;
+  border-radius: 999px;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #f0e2e7;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: #6d3b4d;
+  font-size: .78rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+td strong {
+  display: block;
+  color: #33111c;
+}
+
+td small {
+  display: block;
+  margin-top: 4px;
+}
+
+.status {
+  display: inline-flex;
+  padding: 6px 9px;
+  color: #1e5a35;
+  background: #e8f8ee;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: .82rem;
+}
+
+.status.off {
+  color: #7b4b00;
+  background: #fff0c7;
+}
+
+.rowActions {
+  white-space: nowrap;
+}
+
+.rowActions button,
+.ghostButton {
+  padding: 9px 11px;
+  color: #7b1634;
+  background: #fff0f6;
+}
+
+.rowActions .danger {
+  margin-left: 8px;
+  color: #9c1f3c;
+  background: #ffe6ec;
+}
+
+.identityGrid {
+  position: relative;
+  display: grid;
+  gap: 20px;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.tagList span {
+  padding: 6px 9px;
+  color: #5b1028;
+  background: #fff0f6;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.toastStack {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 1200;
+  width: min(390px, calc(100vw - 44px));
+}
+
+.toastMessage {
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  color: #32111c;
+  background: white;
+  border: 1px solid #ead4dc;
+  border-left: 5px solid #7b1634;
+  border-radius: 8px;
+  box-shadow: 0 20px 55px rgba(64, 16, 31, .18);
+}
+
+.toastMessage.success {
+  border-left-color: #218347;
+}
+
+.toastMessage.error {
+  border-left-color: #b42342;
+}
+
+.toastMessage strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.toastMessage p {
+  margin: 0;
+  color: #604650;
+  line-height: 1.45;
+}
+
+.toastClose {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: #7b1634;
+  background: #fff0f6;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.alert {
+  margin: 0 0 18px;
+  padding: 13px 15px;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.alert.error {
+  color: #8d1832;
+  background: #ffe7ed;
+}
+
+.alert.success {
+  color: #1b6337;
+  background: #e7f8ee;
+}
+
+.uploadGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.imageControls {
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(260px, 1fr);
+  gap: 16px;
+}
+
+.imageControls label {
+  display: grid;
+  gap: 8px;
+  color: #4d3038;
+  font-weight: 800;
+}
+
+.imageControls select,
+.imageControls input {
+  width: 100%;
+  border: 1px solid #ead4dc;
+  border-radius: 8px;
+  padding: 12px 13px;
+  color: #32111c;
+  background: white;
+  font: inherit;
+}
+
+.uploadDrop {
+  min-height: 240px;
+  padding: 26px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  border: 2px dashed #e0b9c8;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff8fb;
+}
+
+.uploadDrop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.uploadDrop span {
+  color: #7b1634;
+  font-weight: 900;
+}
+
+.previewBox {
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #73535f;
+  background: #f5f0ee;
+  border-radius: 8px;
+}
+
+.previewBox img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewGrid {
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.previewGrid img {
+  aspect-ratio: 1;
+  border-radius: 8px;
+}
+
+.uploadActions {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.uploadActions span {
+  color: #73535f;
+  font-weight: 800;
+}
+
+.uploadResult {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  color: #1b6337;
+  background: #e7f8ee;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.uploadResult.error {
+  color: #8d1832;
+  background: #ffe7ed;
+}
+
+.categoryImageSection {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid #f0e2e7;
+}
+
+.categoryImageSection h3 {
+  margin: 0 0 7px;
+  color: #40101f;
+  font-size: 1.25rem;
+}
+
+.categoryImageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.categoryImageCard {
+  overflow: hidden;
+  border: 1px solid #f0e2e7;
+  border-radius: 8px;
+  background: white;
+}
+
+.categoryImageCard img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: #f5f0ee;
+}
+
+.categoryImageCard div {
+  padding: 12px;
+}
+
+.categoryImageCard strong,
+.categoryImageCard small {
+  display: block;
+}
+
+.categoryImageCard strong {
+  color: #33111c;
+  word-break: break-word;
+}
+
+.categoryImageCard small,
+.emptyState {
+  margin-top: 4px;
+  color: #73535f;
+}
+
+.emptyState {
+  margin-bottom: 0;
+}
+
+.endpointNote {
+  margin: 18px 0 0;
+  line-height: 1.6;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(30, 10, 18, .48);
+}
+
+.modalPanel {
+  width: min(100%, 860px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 28px 90px rgba(20, 5, 10, .32);
+}
+
+.modalPanel.small {
+  width: min(100%, 560px);
+}
+
+.modalHeader {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  color: #32111c;
+}
+
+.adminForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.adminForm.singleColumn {
+  grid-template-columns: 1fr;
+}
+
+.adminForm label {
+  display: grid;
+  gap: 8px;
+  color: #4d3038;
+  font-weight: 800;
+}
+
+.adminForm input,
+.adminForm textarea,
+.adminForm select {
+  width: 100%;
+  border: 1px solid #ead4dc;
+  border-radius: 8px;
+  padding: 12px 13px;
+  color: #32111c;
+  background: white;
+  font: inherit;
+}
+
+.adminForm textarea {
+  resize: vertical;
+}
+
+.fullField,
+.modalActions {
+  grid-column: 1 / -1;
+}
+
+.inlineCheck {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.inlineCheck input {
+  width: auto;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1040px) {
+  .adminShell,
+  .adminShell.sidebarCollapsed,
+  .uploadGrid,
+  .imageControls {
+    grid-template-columns: 1fr;
+  }
+
+  .adminSidebar {
+    position: static;
+    height: auto;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sidebarCollapsed .brandMark,
+  .sidebarCollapsed .sidebarHeader p,
+  .sidebarCollapsed .sidebarNav span {
+    display: initial;
+  }
+}
+
+@media (max-width: 640px) {
+  .adminMain,
+  .adminSidebar {
+    padding: 20px;
+  }
+
+  .adminHeader,
+  .panelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .userButton,
+  .refreshButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .userDropdown {
+    left: 0;
+    right: auto;
+    width: 100%;
+  }
+
+  .metricsGrid,
+  .adminForm {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,95 @@
+.adminLogin {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(228, 95, 145, .18), transparent 28%),
+    linear-gradient(135deg, #fff7f4 0%, #fff 55%, #f7fbff 100%);
+}
+
+.loginPanel {
+  width: min(100%, 440px);
+  padding: 36px;
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(123, 22, 52, .12);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(91, 16, 40, .14);
+}
+
+.brandMark {
+  color: #7b1634;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 34px;
+}
+
+.loginCopy span {
+  color: #c84372;
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.loginCopy h1 {
+  margin: 12px 0 10px;
+  color: #40101f;
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.loginCopy p {
+  color: #654652;
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+
+.loginForm {
+  display: grid;
+  gap: 18px;
+}
+
+.loginForm label {
+  display: grid;
+  gap: 8px;
+  color: #4d3038;
+  font-weight: 800;
+}
+
+.loginForm input {
+  width: 100%;
+  border: 1px solid #eed4dd;
+  border-radius: 8px;
+  padding: 14px 15px;
+  color: #32121c;
+  font: inherit;
+  background: #fff;
+}
+
+.loginForm input:focus {
+  border-color: #c84372;
+  outline: 3px solid rgba(200, 67, 114, .16);
+}
+
+.loginForm button {
+  border: 0;
+  border-radius: 8px;
+  padding: 15px 18px;
+  color: white;
+  background: #7b1634;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.loginForm button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+.formError {
+  margin: 0;
+  color: #a21d3c;
+  font-weight: 800;
+}

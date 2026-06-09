@@ -1,0 +1,20 @@
+.footer {
+  background: #4a1024;
+  color: #fff7f2;
+  padding: 55px 7%;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 35px;
+}
+
+.footer h3,
+.footer h4 {
+  color: #f7c7d8;
+}
+
+.footer a {
+  display: block;
+  color: #fff7f2;
+  text-decoration: none;
+  margin: 10px 0;
+}

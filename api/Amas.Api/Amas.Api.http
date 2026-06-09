@@ -1,0 +1,11 @@
+@Amas.Api_HostAddress = http://localhost:8080
+
+GET {{Amas.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{Amas.Api_HostAddress}}/api/v1/products
+Accept: application/json
+
+###

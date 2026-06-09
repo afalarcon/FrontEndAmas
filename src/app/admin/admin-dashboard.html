@@ -1,0 +1,790 @@
+<main class="adminShell" [class.sidebarCollapsed]="sidebarCollapsed">
+  <aside class="adminSidebar">
+    <div class="sidebarHeader">
+      <div>
+        <div class="brandMark">AMAS</div>
+        <p>Administración</p>
+      </div>
+
+      <button type="button" class="iconButton" (click)="toggleSidebar()" aria-label="Contraer menú">
+        {{ sidebarCollapsed ? '→' : '←' }}
+      </button>
+    </div>
+
+    <nav class="sidebarNav">
+      <button type="button" [class.active]="activeTab === 'overview'" (click)="activeTab = 'overview'">
+        <span>Resumen</span>
+      </button>
+      <button type="button" [class.active]="activeTab === 'products'" (click)="activeTab = 'products'">
+        <span>Inventario</span>
+      </button>
+      <button type="button" [class.active]="activeTab === 'categories'" (click)="activeTab = 'categories'">
+        <span>Categorías</span>
+      </button>
+      <button type="button" [class.active]="activeTab === 'content'" (click)="activeTab = 'content'">
+        <span>Landing</span>
+      </button>
+      <button type="button" [class.active]="activeTab === 'images'" (click)="activeTab = 'images'">
+        <span>Imágenes</span>
+      </button>
+      <button type="button" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">
+        <span>Usuarios</span>
+      </button>
+    </nav>
+  </aside>
+
+  <section class="adminMain">
+    <header class="adminHeader">
+      <div>
+        <span>Dashboard</span>
+        <h1>Administración AMAS</h1>
+      </div>
+
+      <div class="headerActions">
+        <button type="button" class="refreshButton" (click)="refresh()" [disabled]="loading">
+          {{ loading ? 'Cargando...' : 'Actualizar' }}
+        </button>
+
+        <div class="userMenu">
+          <button type="button" class="userButton" (click)="toggleUserMenu()" aria-label="Menú de usuario">
+            <span class="userIcon">U</span>
+            <span>{{ userEmail }}</span>
+            <span>⌄</span>
+          </button>
+
+          @if (userMenuOpen) {
+            <div class="userDropdown">
+              <strong>{{ userEmail }}</strong>
+              <button type="button" (click)="logout()">Cerrar sesión</button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    @if (error) {
+      <p class="alert error">{{ error }}</p>
+    }
+
+    @if (activeTab === 'overview') {
+      <section class="metricsGrid">
+        <article>
+          <span>Productos</span>
+          <strong>{{ products.length }}</strong>
+        </article>
+        <article>
+          <span>Activos</span>
+          <strong>{{ activeProducts }}</strong>
+        </article>
+        <article>
+          <span>Categorías</span>
+          <strong>{{ categories.length }}</strong>
+        </article>
+        <article>
+          <span>Usuarios</span>
+          <strong>{{ users.length }}</strong>
+        </article>
+        <article>
+          <span>Valor base</span>
+          <strong>{{ inventoryValue | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+        </article>
+      </section>
+
+      <section class="workPanel">
+        <div class="panelTitle">
+          <h2>Estado del administrador</h2>
+          <p>El panel ya separa la gestión interna de la landing pública y consume los endpoints de la API.</p>
+        </div>
+
+        <div class="roadmap">
+          <span>Login JWT</span>
+          <span>CRUD productos</span>
+          <span>CRUD categorías</span>
+          <span>Contenido landing</span>
+          <span>Upload imágenes</span>
+          <span>Usuarios y roles</span>
+        </div>
+      </section>
+    }
+
+    @if (activeTab === 'products') {
+      <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+        <div class="panelHeader">
+          <div class="panelTitle">
+            <h2>Inventario</h2>
+            <p>Lista de productos registrados en base de datos.</p>
+          </div>
+
+          <button type="button" class="primaryButton" (click)="openProductModal()">Crear producto</button>
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (product of products; track product.id) {
+                <tr>
+                  <td>
+                    <strong>{{ product.name }}</strong>
+                    <small>{{ product.sku || product.slug }}</small>
+                  </td>
+                  <td>{{ product.categoryName || 'Sin categoría' }}</td>
+                  <td>{{ product.price | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                  <td>
+                    <span class="status" [class.off]="!product.isActive">
+                      {{ product.isActive ? 'Activo' : 'Oculto' }}
+                    </span>
+                  </td>
+                  <td class="rowActions">
+                    <button type="button" (click)="editProduct(product)" [disabled]="!!pendingAction">Editar</button>
+                    <button
+                      type="button"
+                      class="danger"
+                      (click)="deleteProduct(product)"
+                      [disabled]="!!pendingAction"
+                    >
+                      {{ isActionPending('deleteProduct:' + product.id) ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">Todavía no hay productos.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (pendingAction || loading) {
+          <div class="panelLoading">
+            <span class="spinner"></span>
+            <strong>{{ pendingAction ? 'Procesando acción...' : 'Cargando información...' }}</strong>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab === 'categories') {
+      <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+        <div class="panelHeader">
+          <div class="panelTitle">
+            <h2>Categorías</h2>
+            <p>Lista de categorías registradas en base de datos.</p>
+          </div>
+
+          <button type="button" class="primaryButton" (click)="openCategoryModal()">Crear categoría</button>
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Slug</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (category of categories; track category.id) {
+                <tr>
+                  <td>
+                    <strong>{{ category.name }}</strong>
+                    <small>{{ category.description || 'Sin descripción' }}</small>
+                  </td>
+                  <td>{{ category.slug }}</td>
+                  <td>
+                    <span class="status" [class.off]="!category.isActive">
+                      {{ category.isActive ? 'Activa' : 'Oculta' }}
+                    </span>
+                  </td>
+                  <td class="rowActions">
+                    <button type="button" (click)="editCategory(category)" [disabled]="!!pendingAction">Editar</button>
+                    <button
+                      type="button"
+                      class="danger"
+                      (click)="deleteCategory(category)"
+                      [disabled]="!!pendingAction"
+                    >
+                      {{ isActionPending('deleteCategory:' + category.id) ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4">Todavía no hay categorías.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (pendingAction || loading) {
+          <div class="panelLoading">
+            <span class="spinner"></span>
+            <strong>{{ pendingAction ? 'Procesando acción...' : 'Cargando información...' }}</strong>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab === 'content') {
+      <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+        <div class="panelHeader">
+          <div class="panelTitle">
+            <h2>Contenido de landing</h2>
+            <p>Configuraciones que podrán alimentar textos y secciones de la fanpage.</p>
+          </div>
+
+          <button type="button" class="primaryButton" (click)="openConfigurationModal()">Crear contenido</button>
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Clave</th>
+                <th>Valor</th>
+                <th>Descripción</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (configuration of configurations; track configuration.id) {
+                <tr>
+                  <td><strong>{{ configuration.key }}</strong></td>
+                  <td>{{ configuration.value }}</td>
+                  <td>{{ configuration.description || 'Sin descripción' }}</td>
+                  <td class="rowActions">
+                    <button type="button" (click)="openConfigurationModal(configuration)">Editar</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4">Todavía no hay configuraciones.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (pendingAction || loading) {
+          <div class="panelLoading">
+            <span class="spinner"></span>
+            <strong>{{ pendingAction ? 'Procesando acción...' : 'Cargando información...' }}</strong>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab === 'images') {
+      <section class="workPanel uploadPanel" [class.isBusy]="isActionPending('uploadCategoryImages')">
+        <div class="panelHeader">
+          <div class="panelTitle">
+            <h2>Banco de imágenes por categoría</h2>
+            <p>Las imágenes se guardan en la API y quedan asociadas a la categoría seleccionada.</p>
+          </div>
+        </div>
+
+        <div class="imageControls">
+          <label>
+            Categoría
+            <select
+              name="selectedImageCategoryId"
+              [(ngModel)]="selectedImageCategoryId"
+              (ngModelChange)="onImageCategoryChange()"
+            >
+              @for (category of categories; track category.id) {
+                <option [ngValue]="category.id">{{ category.name }}</option>
+              }
+            </select>
+          </label>
+
+          <label>
+            Texto alternativo
+            <input
+              name="imageAltText"
+              [(ngModel)]="imageAltText"
+              placeholder="Ej: Detalle personalizado AMAS"
+            >
+          </label>
+        </div>
+
+        <div class="uploadGrid">
+          <label class="uploadDrop">
+            <input type="file" accept="image/*" multiple (change)="selectImage($event)">
+            <span>Seleccionar imágenes</span>
+            <small>Campo multipart `files`. Puedes cargar varias imágenes a la vez.</small>
+          </label>
+
+          <div class="previewBox">
+            @if (selectedImagePreviews.length > 0) {
+              <div class="previewGrid">
+                @for (preview of selectedImagePreviews; track preview) {
+                  <img [src]="preview" alt="Vista previa de imagen seleccionada">
+                }
+              </div>
+            } @else {
+              <span>Vista previa de carga</span>
+            }
+          </div>
+        </div>
+
+        <div class="uploadActions">
+          <button
+            type="button"
+            class="primaryButton"
+            (click)="uploadImages()"
+            [disabled]="!selectedImageCategoryId || selectedImageFiles.length === 0 || !!pendingAction"
+          >
+            {{ isActionPending('uploadCategoryImages') ? 'Cargando imágenes...' : 'Subir imágenes' }}
+          </button>
+
+          @if (selectedImageFiles.length > 0) {
+            <span>{{ selectedImageFiles.length }} archivo(s) seleccionado(s)</span>
+          }
+        </div>
+
+        @if (imageUploadMessage) {
+          <p
+            class="uploadResult"
+            [class.error]="imageUploadMessage.includes('No fue posible') || imageUploadMessage.includes('Selecciona')"
+          >
+            {{ imageUploadMessage }}
+          </p>
+        }
+
+        <section class="categoryImageSection">
+          <div class="panelTitle">
+            <h3>Imágenes asociadas</h3>
+            <p>Lectura desde el endpoint de imágenes de la categoría seleccionada.</p>
+          </div>
+
+          @if (categoryImages.length > 0) {
+            <div class="categoryImageGrid">
+              @for (image of categoryImages; track image.id) {
+                <article class="categoryImageCard">
+                  <img [src]="imageUrl(image)" [alt]="image.altText || image.fileName">
+                  <div>
+                    <strong>{{ image.fileName }}</strong>
+                    <small>{{ image.contentType }} · {{ image.sizeBytes / 1024 | number:'1.0-0' }} KB</small>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="emptyState">Esta categoría todavía no tiene imágenes cargadas.</p>
+          }
+        </section>
+
+        @if (isActionPending('uploadCategoryImages')) {
+          <div class="panelLoading">
+            <span class="spinner"></span>
+            <strong>Subiendo imágenes...</strong>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab === 'users') {
+      <section class="identityGrid">
+        <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+          <div class="panelHeader">
+            <div class="panelTitle">
+              <h2>Usuarios</h2>
+              <p>Administradores que podrán ingresar al dashboard con permisos por rol.</p>
+            </div>
+
+            <button type="button" class="primaryButton" (click)="openUserModal()">Crear usuario</button>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Roles</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of users; track user.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ user.fullName }}</strong>
+                      <small>{{ user.email }}</small>
+                    </td>
+                    <td>
+                      <div class="tagList">
+                        @for (role of user.roles; track role.id) {
+                          <span>{{ role.name }}</span>
+                        } @empty {
+                          <small>Sin roles</small>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status" [class.off]="!user.isActive">
+                        {{ user.isActive ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </td>
+                    <td class="rowActions">
+                      <button type="button" (click)="editUser(user)" [disabled]="!!pendingAction">Editar</button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4">Todavía no hay usuarios creados en base de datos.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+          <div class="panelHeader">
+            <div class="panelTitle">
+              <h2>Roles</h2>
+              <p>Define grupos de permisos para controlar menús y acciones.</p>
+            </div>
+
+            <button type="button" class="primaryButton" (click)="openRoleModal()">Crear rol</button>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rol</th>
+                  <th>Permisos</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (role of roles; track role.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ role.name }}</strong>
+                      <small>{{ role.description || 'Sin descripción' }}</small>
+                    </td>
+                    <td>
+                      <div class="tagList">
+                        @for (permission of role.permissions; track permission.id) {
+                          <span>{{ permission.code }}</span>
+                        } @empty {
+                          <small>Sin permisos</small>
+                        }
+                      </div>
+                    </td>
+                    <td class="rowActions">
+                      <button type="button" (click)="editRole(role)" [disabled]="!!pendingAction">Editar</button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3">Todavía no hay roles.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        @if (pendingAction || loading) {
+          <div class="panelLoading">
+            <span class="spinner"></span>
+            <strong>{{ pendingAction ? 'Procesando acción...' : 'Cargando información...' }}</strong>
+          </div>
+        }
+      </section>
+    }
+  </section>
+</main>
+
+@if (toast) {
+  <div class="toastStack" aria-live="polite">
+    <section class="toastMessage" [class.success]="toast.type === 'success'" [class.error]="toast.type === 'error'">
+      <div>
+        <strong>{{ toast.type === 'error' ? 'Revisa la acción' : 'Acción completada' }}</strong>
+        <p>{{ toast.message }}</p>
+      </div>
+
+      <button type="button" class="toastClose" (click)="dismissToast()" aria-label="Cerrar mensaje">×</button>
+    </section>
+  </div>
+}
+
+@if (isProductModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel">
+      <div class="modalHeader">
+        <h2>{{ editingProductId ? 'Editar producto' : 'Crear producto' }}</h2>
+        <button
+          type="button"
+          class="iconButton"
+          (click)="closeProductModal()"
+          [disabled]="saving"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm" (ngSubmit)="saveProduct()" #productNgForm="ngForm">
+        <label>
+          Nombre
+          <input name="name" [(ngModel)]="productForm.name" required>
+        </label>
+
+        <label>
+          Slug
+          <input name="slug" [(ngModel)]="productForm.slug">
+        </label>
+
+        <label>
+          SKU
+          <input name="sku" [(ngModel)]="productForm.sku">
+        </label>
+
+        <label>
+          Precio
+          <input type="number" min="0" name="price" [(ngModel)]="productForm.price" required>
+        </label>
+
+        <label>
+          Categoría
+          <select name="categoryId" [(ngModel)]="productForm.categoryId">
+            <option [ngValue]="null">Sin categoría</option>
+            @for (category of categories; track category.id) {
+              <option [ngValue]="category.id">{{ category.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="fullField">
+          Descripción
+          <textarea name="description" rows="4" [(ngModel)]="productForm.description"></textarea>
+        </label>
+
+        <label class="inlineCheck">
+          <input type="checkbox" name="isActive" [(ngModel)]="productForm.isActive">
+          Producto activo
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeProductModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="primaryButton" [disabled]="productNgForm.invalid || saving">
+            {{ isActionPending('saveProduct') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isCategoryModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel small">
+      <div class="modalHeader">
+        <h2>{{ editingCategoryId ? 'Editar categoría' : 'Crear categoría' }}</h2>
+        <button
+          type="button"
+          class="iconButton"
+          (click)="closeCategoryModal()"
+          [disabled]="saving"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm singleColumn" (ngSubmit)="saveCategory()" #categoryNgForm="ngForm">
+        <label>
+          Nombre
+          <input name="categoryName" [(ngModel)]="categoryForm.name" required>
+        </label>
+
+        <label>
+          Slug
+          <input name="categorySlug" [(ngModel)]="categoryForm.slug">
+        </label>
+
+        <label>
+          Descripción
+          <textarea name="categoryDescription" rows="4" [(ngModel)]="categoryForm.description"></textarea>
+        </label>
+
+        <label class="inlineCheck">
+          <input type="checkbox" name="categoryIsActive" [(ngModel)]="categoryForm.isActive">
+          Categoría activa
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeCategoryModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="primaryButton" [disabled]="categoryNgForm.invalid || saving">
+            {{ isActionPending('saveCategory') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isConfigurationModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel small">
+      <div class="modalHeader">
+        <h2>Contenido de landing</h2>
+        <button
+          type="button"
+          class="iconButton"
+          (click)="closeConfigurationModal()"
+          [disabled]="saving"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm singleColumn" (ngSubmit)="saveConfiguration()" #configurationNgForm="ngForm">
+        <label>
+          Clave
+          <input name="configurationKey" [(ngModel)]="configurationForm.key" required>
+        </label>
+
+        <label>
+          Valor
+          <textarea name="configurationValue" rows="5" [(ngModel)]="configurationForm.value" required></textarea>
+        </label>
+
+        <label>
+          Descripción interna
+          <input name="configurationDescription" [(ngModel)]="configurationForm.description">
+        </label>
+
+        <div class="modalActions">
+          <button
+            type="button"
+            class="ghostButton"
+            (click)="closeConfigurationModal()"
+            [disabled]="saving"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="primaryButton" [disabled]="configurationNgForm.invalid || saving">
+            {{ isActionPending('saveConfiguration') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isUserModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel small">
+      <div class="modalHeader">
+        <h2>{{ editingUserId ? 'Editar usuario' : 'Crear usuario' }}</h2>
+        <button type="button" class="iconButton" (click)="closeUserModal()" [disabled]="saving" aria-label="Cerrar">
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm singleColumn" (ngSubmit)="saveUser()" #userNgForm="ngForm">
+        <label>
+          Nombre completo
+          <input name="userFullName" [(ngModel)]="userForm.fullName" required>
+        </label>
+
+        <label>
+          Correo
+          <input type="email" name="userEmail" [(ngModel)]="userForm.email" required>
+        </label>
+
+        <label>
+          Contraseña
+          <input
+            type="password"
+            name="userPassword"
+            [(ngModel)]="userForm.password"
+            [required]="!editingUserId"
+            placeholder="Mínimo 8 caracteres"
+          >
+        </label>
+
+        <label>
+          Roles
+          <select name="userRoleIds" multiple [(ngModel)]="userForm.roleIds">
+            @for (role of roles; track role.id) {
+              <option [ngValue]="role.id">{{ role.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="inlineCheck">
+          <input type="checkbox" name="userIsActive" [(ngModel)]="userForm.isActive">
+          Usuario activo
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeUserModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="primaryButton" [disabled]="userNgForm.invalid || saving">
+            {{ isActionPending('saveUser') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isRoleModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel">
+      <div class="modalHeader">
+        <h2>{{ editingRoleId ? 'Editar rol' : 'Crear rol' }}</h2>
+        <button type="button" class="iconButton" (click)="closeRoleModal()" [disabled]="saving" aria-label="Cerrar">
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm singleColumn" (ngSubmit)="saveRole()" #roleNgForm="ngForm">
+        <label>
+          Nombre del rol
+          <input name="roleName" [(ngModel)]="roleForm.name" required>
+        </label>
+
+        <label>
+          Descripción
+          <textarea name="roleDescription" rows="3" [(ngModel)]="roleForm.description"></textarea>
+        </label>
+
+        <label>
+          Permisos
+          <select name="rolePermissionIds" multiple [(ngModel)]="roleForm.permissionIds">
+            @for (permission of permissions; track permission.id) {
+              <option [ngValue]="permission.id">{{ permission.code }} - {{ permission.description }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeRoleModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="primaryButton" [disabled]="roleNgForm.invalid || saving">
+            {{ isActionPending('saveRole') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
