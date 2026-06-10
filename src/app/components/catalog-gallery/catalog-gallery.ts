@@ -69,7 +69,7 @@ export class CatalogGallery implements OnInit {
 
   whatsappUrl(item: GalleryImage): string {
     const text = `Hola, quiero informacion sobre este diseño de ${item.categoryName}: ${this.imageTitle(item)} ${item.sourceUrl}`;
-    return `https://wa.me/573103737053?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/573216499629?text=${encodeURIComponent(text)}`;
   }
 
   openImage(item: GalleryImage): void {
