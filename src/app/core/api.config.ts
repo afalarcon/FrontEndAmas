@@ -4,7 +4,7 @@ declare global {
   }
 }
 
-const productionApiBaseUrl = 'https://api.amaslohaceposible.cloud/api/v1';
+const productionApiBaseUrl = 'https://apinet.amaslohaceposible.cloud/api/v1';
 
 const runtimeApiBaseUrl =
   typeof window === 'undefined' ? '' : window.__AMAS_API_BASE_URL__?.trim() ?? '';
