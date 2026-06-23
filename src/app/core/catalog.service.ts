@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, throwError, timeout } from 'rxjs';
 import { API_BASE_URL, API_ORIGIN_URL } from './api.config';
-import { ApiResponse, CatalogCategory, CatalogImagesGroup, CategoryImage } from './api.types';
+import { ApiResponse, CatalogCategory, CatalogImagesGroup, CatalogProduct, CatalogProductImage, CategoryImage } from './api.types';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
@@ -28,7 +28,18 @@ export class CatalogService {
       );
   }
 
-  imageUrl(image: CategoryImage): string {
+  catalogProducts(categoryId: string | null = null) {
+    const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : '';
+    return this.http
+      .get<ApiResponse<CatalogProduct[]>>(`${API_BASE_URL}/catalogs/products${query}`)
+      .pipe(
+        timeout(8000),
+        map((response) => this.unwrap(response)),
+        catchError((error) => this.handleCatalogError(error)),
+      );
+  }
+
+  imageUrl(image: CategoryImage | CatalogProductImage): string {
     if (/^https?:\/\//i.test(image.url)) {
       return image.url;
     }

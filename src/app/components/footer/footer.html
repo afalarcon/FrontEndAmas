@@ -1,26 +1,135 @@
 <footer class="footer" id="contacto">
-  <div>
-    <h3>AMAS lo hacemos posible</h3>
-    <p>Detalles personalizados, sublimación, papelería creativa, impresión 3D y mucho más.</p>
-  </div>
+  <section class="contactSection" aria-labelledby="contact-title">
+    <div class="contactIntro">
+      <span>Contacto</span>
+      <h2 id="contact-title">Cuéntanos qué quieres crear</h2>
+      <p>
+        Recibimos tu idea y la revisamos para responderte con una propuesta clara por el canal que nos compartas.
+      </p>
 
-  <div>
-    <h4>Enlaces</h4>
-    <a href="#inicio">Inicio</a>
-    <a href="#creaciones">Creaciones</a>
-    <a href="#categorias">Categorías</a>
-  </div>
+      <a
+        class="whatsappLink"
+        href="https://wa.me/573216499629?text=Hola,%20quiero%20más%20información%20sobre%20sus%20productos"
+        target="_blank"
+        rel="noopener"
+        aria-label="Contactar por WhatsApp"
+      >
+        WhatsApp
+      </a>
+    </div>
 
-  <div>
-    <h4>Contacto</h4>
-   <a
-  class="floating-whatsapp"
-  href="https://wa.me/573216499629?text=Hola,%20quiero%20más%20información%20sobre%20sus%20productos"
-  target="_blank"
-  aria-label="Contactar por WhatsApp"
->
-  WhatsApp
-</a>
-    <p>Colombia</p>
-  </div>
+    <form class="contactForm" #form="ngForm" novalidate (ngSubmit)="submitContact(form)">
+      <div class="formGrid">
+        <label>
+          Nombre
+          <input
+            name="fullName"
+            type="text"
+            [(ngModel)]="contactForm.fullName"
+            required
+            minlength="3"
+            maxlength="120"
+            autocomplete="name"
+            placeholder="Tu nombre"
+          >
+        </label>
+
+        <label>
+          Correo
+          <input
+            name="email"
+            type="email"
+            [(ngModel)]="contactForm.email"
+            required
+            maxlength="160"
+            autocomplete="email"
+            placeholder="correo@ejemplo.com"
+          >
+        </label>
+
+        <label>
+          Teléfono
+          <input
+            name="phone"
+            type="tel"
+            [(ngModel)]="contactForm.phone"
+            maxlength="40"
+            autocomplete="tel"
+            placeholder="Opcional"
+          >
+        </label>
+
+        <label>
+          Solicitud
+          <select name="requestType" [(ngModel)]="contactForm.requestType" required>
+            @for (type of requestTypes; track type) {
+              <option [value]="type">{{ type }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <label>
+        Mensaje
+        <textarea
+          name="message"
+          [(ngModel)]="contactForm.message"
+          required
+          minlength="15"
+          maxlength="1200"
+          rows="5"
+          placeholder="Cuéntanos qué necesitas, cantidades, fecha o detalles importantes"
+        ></textarea>
+      </label>
+
+      <label class="trapField" aria-hidden="true">
+        Sitio web
+        <input
+          name="website"
+          type="text"
+          [(ngModel)]="contactForm.website"
+          tabindex="-1"
+          autocomplete="off"
+        >
+      </label>
+
+      @if (hasCaptcha) {
+        <div class="captchaSlot" #turnstileContainer></div>
+      }
+
+      <label class="consentCheck">
+        <input name="acceptedContact" type="checkbox" [(ngModel)]="contactForm.acceptedContact" required>
+        <span>Acepto que AMAS use estos datos para responder mi solicitud.</span>
+      </label>
+
+      @if (contactMessage) {
+        <p class="contactMessage" [class.success]="contactStatus === 'success'" [class.error]="contactStatus === 'error'">
+          {{ contactMessage }}
+        </p>
+      }
+
+      <button class="contactSubmit" type="submit" [disabled]="contactStatus === 'sending'">
+        {{ contactStatus === 'sending' ? 'Enviando...' : 'Enviar solicitud' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="footerInfo">
+    <div>
+      <h3>AMAS lo hacemos posible</h3>
+      <p>Detalles personalizados, sublimación, papelería creativa, impresión 3D y mucho más.</p>
+    </div>
+
+    <div>
+      <h4>Enlaces</h4>
+      <a href="#inicio">Inicio</a>
+      <a href="#creaciones">Creaciones</a>
+      <a href="#categorias">Categorías</a>
+    </div>
+
+    <div>
+      <h4>Ubicación</h4>
+      <p>Colombia</p>
+    </div>
+  </section>
 </footer>
