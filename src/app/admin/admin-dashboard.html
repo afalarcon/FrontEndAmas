@@ -12,24 +12,13 @@
     </div>
 
     <nav class="sidebarNav">
-      <button type="button" [class.active]="activeTab === 'overview'" (click)="activeTab = 'overview'">
-        <span>Resumen</span>
-      </button>
-      <button type="button" [class.active]="activeTab === 'products'" (click)="activeTab = 'products'">
-        <span>Inventario</span>
-      </button>
-      <button type="button" [class.active]="activeTab === 'categories'" (click)="activeTab = 'categories'">
-        <span>Categorías</span>
-      </button>
-      <button type="button" [class.active]="activeTab === 'content'" (click)="activeTab = 'content'">
-        <span>Landing</span>
-      </button>
-      <button type="button" [class.active]="activeTab === 'images'" (click)="activeTab = 'images'">
-        <span>Imágenes</span>
-      </button>
-      <button type="button" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">
-        <span>Usuarios</span>
-      </button>
+      @for (item of menuAccessOptions; track item.tab) {
+        @if (canAccess(item.tab)) {
+          <button type="button" [class.active]="activeTab === item.tab" (click)="activateTab(item.tab)">
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      }
     </nav>
   </aside>
 
@@ -81,6 +70,10 @@
           <strong>{{ categories.length }}</strong>
         </article>
         <article>
+          <span>Stock bajo</span>
+          <strong>{{ lowStockItems }}</strong>
+        </article>
+        <article>
           <span>Usuarios</span>
           <strong>{{ users.length }}</strong>
         </article>
@@ -96,9 +89,20 @@
           <p>El panel ya separa la gestión interna de la landing pública y consume los endpoints de la API.</p>
         </div>
 
+        <div class="stockReport">
+          @for (report of stockReportByType; track report.type) {
+            <article>
+              <span>{{ report.label }}</span>
+              <strong>{{ report.stock | number:'1.0-2' }}</strong>
+              <small>{{ report.items }} ítems · {{ report.lowStock }} en stock bajo</small>
+            </article>
+          }
+        </div>
+
         <div class="roadmap">
           <span>Login JWT</span>
           <span>CRUD productos</span>
+          <span>Kardex inventario</span>
           <span>CRUD categorías</span>
           <span>Contenido landing</span>
           <span>Upload imágenes</span>
@@ -111,7 +115,7 @@
       <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
         <div class="panelHeader">
           <div class="panelTitle">
-            <h2>Inventario</h2>
+            <h2>Productos</h2>
             <p>Lista de productos registrados en base de datos.</p>
           </div>
 
@@ -134,7 +138,7 @@
                 <tr>
                   <td>
                     <strong>{{ product.name }}</strong>
-                    <small>{{ product.sku || product.slug }}</small>
+                    <small>#{{ product.productNumber }} · {{ product.sku || product.slug }}</small>
                   </td>
                   <td>{{ product.categoryName || 'Sin categoría' }}</td>
                   <td>{{ product.price | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
@@ -158,6 +162,541 @@
               } @empty {
                 <tr>
                   <td colspan="5">Todavía no hay productos.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (pendingAction || loading) {
+          <div class="panelLoading">
+            <span class="spinner"></span>
+            <strong>{{ pendingAction ? 'Procesando acción...' : 'Cargando información...' }}</strong>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab === 'inventory') {
+      <section class="inventoryLayout">
+        <div class="inventoryTabs" role="tablist" aria-label="Secciones de Kardex">
+          @if (canAccessInventoryStock()) {
+            <button
+              type="button"
+              role="tab"
+              [class.active]="activeInventorySection === 'stock'"
+              (click)="activateInventorySection('stock')"
+            >
+              Kardex de inventario y movimientos
+            </button>
+          }
+          @if (canAccessInventoryInvoices()) {
+            <button
+              type="button"
+              role="tab"
+              [class.active]="activeInventorySection === 'invoices'"
+              (click)="activateInventorySection('invoices')"
+            >
+              Facturas de entrada
+            </button>
+          }
+        </div>
+
+        @if (activeInventorySection === 'stock' && canAccessInventoryStock()) {
+          <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+          <div class="panelHeader">
+            <div class="panelTitle">
+              <h2>Kardex de inventario</h2>
+              <p>Control de existencias, entradas y salidas para productos, insumos y elementos.</p>
+            </div>
+
+            <button type="button" class="primaryButton" (click)="openInventoryItemModal()">Crear ítem</button>
+          </div>
+
+          <div class="inventorySummary">
+            <article>
+              <span>Ítems</span>
+              <strong>{{ inventoryItems.length }}</strong>
+            </article>
+            <article>
+              <span>Stock bajo</span>
+              <strong>{{ lowStockItems }}</strong>
+            </article>
+            <article>
+              <span>Unidades totales</span>
+              <strong>{{ inventoryStockValue | number:'1.0-2' }}</strong>
+            </article>
+          </div>
+
+          <div class="tableTools">
+            <label>
+              <span>Buscar ítems</span>
+              <input
+                type="search"
+                [(ngModel)]="inventorySearch"
+                (ngModelChange)="onInventorySearchChange()"
+                placeholder="Nombre, SKU, tipo o estado"
+              >
+            </label>
+            <small>{{ filteredInventoryItems.length }} resultado(s)</small>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ítem</th>
+                  <th>Tipo</th>
+                  <th>Stock</th>
+                  <th>Mínimo</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of pagedInventoryItems; track item.id) {
+                  <tr [class.selectedRow]="item.id === selectedInventoryItemId">
+                    <td>
+                      <strong>{{ item.name }}</strong>
+                      <small>#{{ item.inventoryItemNumber }} · {{ item.sku }} · {{ item.productName || 'Sin producto asociado' }}</small>
+                    </td>
+                    <td>{{ inventoryTypeLabel(item.type) }}</td>
+                    <td>
+                      <strong>{{ item.currentStock | number:'1.0-2' }}</strong>
+                      <small>{{ item.unit }}</small>
+                    </td>
+                    <td>{{ item.minimumStock | number:'1.0-2' }}</td>
+                    <td>
+                      <span class="status" [class.off]="item.isBelowMinimum">
+                        {{ item.isBelowMinimum ? 'Stock bajo' : 'Disponible' }}
+                      </span>
+                    </td>
+                    <td class="rowActions">
+                      <button type="button" (click)="selectInventoryItem(item.id)">Kardex</button>
+                      <button type="button" (click)="editInventoryItem(item)" [disabled]="!!pendingAction">Editar</button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6">
+                      {{ inventorySearch ? 'No hay ítems que coincidan con la búsqueda.' : 'Todavía no hay ítems de inventario.' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paginationBar">
+            <button type="button" (click)="previousInventoryPage()" [disabled]="inventoryPage === 1">Anterior</button>
+            <span>Página {{ inventoryPage }} de {{ inventoryTotalPages }}</span>
+            <button type="button" (click)="nextInventoryPage()" [disabled]="inventoryPage === inventoryTotalPages">Siguiente</button>
+          </div>
+
+          @if (pendingAction || loading) {
+            <div class="panelLoading">
+              <span class="spinner"></span>
+              <strong>{{ pendingAction ? 'Procesando acción...' : 'Cargando información...' }}</strong>
+            </div>
+          }
+          </section>
+
+          <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+          <div class="panelHeader">
+            <div class="panelTitle">
+              <h2>Movimientos</h2>
+              <p>
+                {{ selectedInventoryItem ? selectedInventoryItem.name : 'Selecciona un ítem para ver entradas y salidas.' }}
+              </p>
+            </div>
+
+            <div class="panelActions">
+              <button
+                type="button"
+                class="ghostButton"
+                (click)="openInventoryMovementModal('Entry')"
+                [disabled]="!selectedInventoryItemId || !!pendingAction"
+              >
+                Entrada
+              </button>
+              <button
+                type="button"
+                class="ghostButton"
+                (click)="openInventoryMovementModal('Exit')"
+                [disabled]="!selectedInventoryItemId || !!pendingAction"
+              >
+                Salida
+              </button>
+            </div>
+          </div>
+
+          <div class="tableTools">
+            <label>
+              <span>Buscar movimientos</span>
+              <input
+                type="search"
+                [(ngModel)]="movementSearch"
+                (ngModelChange)="onMovementSearchChange()"
+                placeholder="Tipo, cantidad, motivo o referencia"
+              >
+            </label>
+            <small>{{ filteredInventoryMovements.length }} resultado(s)</small>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Cantidad</th>
+                  <th>Stock final</th>
+                  <th>Referencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (movement of pagedInventoryMovements; track movement.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ movement.occurredAt | date:'short' }}</strong>
+                      <small>#{{ movement.inventoryMovementNumber }} · {{ movement.reason || 'Sin motivo' }}</small>
+                    </td>
+                    <td>
+                      <span class="status" [class.off]="movement.movementType === 'Exit'">
+                        {{ movementLabel(movement.movementType) }}
+                      </span>
+                    </td>
+                    <td>{{ movement.quantity | number:'1.0-2' }}</td>
+                    <td>{{ movement.stockAfter | number:'1.0-2' }}</td>
+                    <td>{{ movement.reference || 'Sin referencia' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5">
+                      {{ movementSearch ? 'No hay movimientos que coincidan con la búsqueda.' : 'Todavía no hay movimientos para este ítem.' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paginationBar">
+            <button type="button" (click)="previousMovementPage()" [disabled]="movementPage === 1">Anterior</button>
+            <span>Página {{ movementPage }} de {{ movementTotalPages }}</span>
+            <button type="button" (click)="nextMovementPage()" [disabled]="movementPage === movementTotalPages">Siguiente</button>
+          </div>
+          </section>
+        }
+
+        @if (activeInventorySection === 'invoices' && canAccessInventoryInvoices()) {
+          <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+          <div class="panelHeader">
+            <div class="panelTitle">
+              <h2>Facturas de entrada</h2>
+              <p>Sube PDF o imagen, revisa coincidencias y confirma para generar entradas Kardex.</p>
+            </div>
+          </div>
+
+          <div class="extractorStatus" [class.available]="invoiceExtractorStatusClass === 'available'" [class.blocked]="invoiceExtractorStatusClass === 'blocked'" [class.muted]="invoiceExtractorStatusClass === 'muted'">
+            <div>
+              <strong>{{ invoiceExtractorStatusLabel }}</strong>
+              <small>{{ invoiceExtractorStatus?.message || 'La disponibilidad se actualiza al cargar o validar facturas.' }}</small>
+            </div>
+            <span>{{ invoiceExtractorStatus?.model || 'Sin modelo' }}</span>
+          </div>
+
+          <form class="invoiceUploadGrid" (ngSubmit)="uploadInvoiceImport()" #invoiceUploadNgForm="ngForm">
+            <label class="uploadDrop">
+              <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" (change)="selectInvoiceFile($event)">
+              <span>{{ selectedInvoiceFile ? selectedInvoiceFile.name : 'Seleccionar factura' }}</span>
+              <small>PDF o imagen. OpenAI extrae datos cuando hay llave y cuota; las lineas siempre se revisan antes de confirmar.</small>
+            </label>
+
+            <label>
+              Proveedor
+              <input name="invoiceSupplierName" [(ngModel)]="invoiceUploadForm.supplierName">
+            </label>
+
+            <label>
+              NIT proveedor
+              <input name="invoiceSupplierTaxId" [(ngModel)]="invoiceUploadForm.supplierTaxId">
+            </label>
+
+            <label>
+              Numero
+              <input name="invoiceNumber" [(ngModel)]="invoiceUploadForm.invoiceNumber">
+            </label>
+
+            <label>
+              Fecha
+              <input type="date" name="invoiceDate" [(ngModel)]="invoiceUploadForm.invoiceDate">
+            </label>
+
+            <label>
+              Observaciones
+              <input name="invoiceNotes" [(ngModel)]="invoiceUploadForm.notes">
+            </label>
+
+            <button type="submit" class="primaryButton" [disabled]="!selectedInvoiceFile || !!pendingAction">
+              {{ isActionPending('uploadInvoiceImport') ? 'Subiendo...' : 'Subir factura' }}
+            </button>
+          </form>
+
+          <div class="invoiceReviewGrid">
+            <aside class="invoiceList">
+              @for (invoice of invoiceImports; track invoice.id) {
+                <button type="button" [class.active]="invoice.id === selectedInvoiceImportId" (click)="selectInvoiceImport(invoice.id)">
+                  <strong>#{{ invoice.invoiceImportNumber }} · {{ invoice.invoiceNumber || invoice.originalFileName }}</strong>
+                  <small>{{ invoice.status }} · {{ invoice.createdAt | date:'short' }}</small>
+                </button>
+              } @empty {
+                <p class="emptyState">Todavia no hay facturas cargadas.</p>
+              }
+            </aside>
+
+            <section class="invoiceDetail">
+              @if (selectedInvoiceImport) {
+                <div class="invoiceHeader">
+                  <div>
+                    <h3>#{{ selectedInvoiceImport.invoiceImportNumber }} · {{ selectedInvoiceImport.invoiceNumber || selectedInvoiceImport.originalFileName }}</h3>
+                    <p>
+                      {{ selectedInvoiceImport.supplierName || 'Proveedor sin definir' }} ·
+                      {{ selectedInvoiceImport.status }}
+                    </p>
+                    @if (selectedInvoiceImport.supplierTaxId || selectedInvoiceImport.supplierStatus) {
+                      <small>
+                        {{ selectedInvoiceImport.supplierTaxId || 'Sin NIT' }}
+                        @if (selectedInvoiceImport.supplierStatus === 'NeedsCompletion') {
+                          · Proveedor pendiente por completar
+                        }
+                      </small>
+                    }
+                    @if (selectedInvoiceImport.notes) {
+                      <small>{{ selectedInvoiceImport.notes }}</small>
+                    }
+                    @if (selectedInvoiceImport.extractionProvider) {
+                      <small>Extractor: {{ selectedInvoiceImport.extractionProvider }}</small>
+                    }
+                  </div>
+
+                  <div class="panelActions">
+                    <button
+                      type="button"
+                      class="ghostButton"
+                      (click)="confirmInvoiceImport()"
+                      [disabled]="!canConfirmSelectedInvoice || !!pendingAction"
+                    >
+                      Confirmar entradas
+                    </button>
+                    <button
+                      type="button"
+                      class="ghostButton"
+                      (click)="cancelInvoiceImport()"
+                      [disabled]="selectedInvoiceImport.status === 'Confirmed' || selectedInvoiceImport.status === 'Cancelled' || !!pendingAction"
+                    >
+                      Cancelar factura
+                    </button>
+                  </div>
+                </div>
+
+                <div class="inventorySummary">
+                  <article>
+                    <span>Lineas</span>
+                    <strong>{{ selectedInvoiceImport.lines.length }}</strong>
+                  </article>
+                  <article>
+                    <span>Listas</span>
+                    <strong>{{ selectedInvoiceReadyLines }}</strong>
+                  </article>
+                  <article>
+                    <span>Pendientes</span>
+                    <strong>{{ selectedInvoicePendingLines }}</strong>
+                  </article>
+                </div>
+
+                <form class="invoiceLineForm" (ngSubmit)="saveInvoiceLine()" #invoiceLineNgForm="ngForm">
+                  <label>
+                    Item inventario
+                    <select name="invoiceLineItem" [(ngModel)]="invoiceLineForm.inventoryItemId" [required]="!invoiceLineForm.ignore">
+                      <option [ngValue]="null">Seleccionar item</option>
+                      @for (item of inventoryItems; track item.id) {
+                        <option [ngValue]="item.id">{{ item.name }} · {{ item.sku }}</option>
+                      }
+                    </select>
+                  </label>
+
+                  <label>
+                    Producto leido
+                    <input name="invoiceLineName" [(ngModel)]="invoiceLineForm.extractedName" [required]="!invoiceLineForm.ignore">
+                  </label>
+
+                  <label>
+                    SKU leido
+                    <input name="invoiceLineSku" [(ngModel)]="invoiceLineForm.extractedSku">
+                  </label>
+
+                  <label>
+                    Cantidad
+                    <input type="number" min="0.01" step="0.01" name="invoiceLineQuantity" [(ngModel)]="invoiceLineForm.quantity" [required]="!invoiceLineForm.ignore">
+                  </label>
+
+                  <label>
+                    Valor unitario
+                    <input type="number" min="0" step="0.01" name="invoiceLineUnitCost" [(ngModel)]="invoiceLineForm.unitCost">
+                  </label>
+
+                  <label>
+                    IVA %
+                    <input type="number" min="0" step="0.01" name="invoiceLineTaxPercent" [(ngModel)]="invoiceLineForm.taxPercent">
+                  </label>
+
+                  <label>
+                    Valor IVA
+                    <input type="number" min="0" step="0.01" name="invoiceLineTaxAmount" [(ngModel)]="invoiceLineForm.taxAmount">
+                  </label>
+
+                  <label>
+                    Total linea
+                    <input type="number" min="0" step="0.01" name="invoiceLineTotal" [(ngModel)]="invoiceLineForm.lineTotal">
+                  </label>
+
+                  <label class="inlineCheck">
+                    <input type="checkbox" name="invoiceLineIgnore" [(ngModel)]="invoiceLineForm.ignore">
+                    Ignorar linea
+                  </label>
+
+                  <div class="modalActions">
+                    @if (editingInvoiceLineId) {
+                      <button type="button" class="ghostButton" (click)="cancelInvoiceLineEdit()" [disabled]="saving">
+                        Cancelar edicion
+                      </button>
+                    }
+                    <button type="submit" class="primaryButton" [disabled]="invoiceLineNgForm.invalid || !!pendingAction">
+                      {{ isActionPending('saveInvoiceLine') ? 'Guardando...' : (editingInvoiceLineId ? 'Actualizar linea' : 'Agregar linea') }}
+                    </button>
+                  </div>
+                </form>
+
+                <div class="tableWrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Linea</th>
+                        <th>Coincidencia</th>
+                        <th>Cantidad</th>
+                        <th>Valores</th>
+                        <th>IVA</th>
+                        <th>Estado</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (line of selectedInvoiceImport.lines; track line.id) {
+                        <tr>
+                          <td>
+                            <strong>{{ line.extractedName }}</strong>
+                            <small>{{ line.extractedSku || 'Sin SKU' }}</small>
+                          </td>
+                          <td>
+                            <strong>{{ line.inventoryItemName || 'Sin asociar' }}</strong>
+                            <small>{{ line.matchStatus }} · {{ line.matchConfidence }}%</small>
+                          </td>
+                          <td>{{ line.quantity | number:'1.0-2' }}</td>
+                          <td>
+                            <strong>{{ (line.unitCost || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+                            <small>{{ (line.lineTotal || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</small>
+                          </td>
+                          <td>
+                            <strong>{{ (line.taxPercent || 0) | number:'1.0-2' }}%</strong>
+                            <small>{{ (line.taxAmount || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</small>
+                          </td>
+                          <td>
+                            <span class="status" [class.off]="line.status !== 'Ready'">{{ line.status }}</span>
+                          </td>
+                          <td class="rowActions">
+                            <button type="button" (click)="editInvoiceLine(line)" [disabled]="!!pendingAction || selectedInvoiceImport.status === 'Confirmed'">
+                              Editar
+                            </button>
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="7">No hay lineas detectadas. Agrega las lineas manualmente para confirmar entradas.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                @if (selectedInvoiceImport.extractedJson) {
+                  <details class="jsonPreview">
+                    <summary>JSON extraído / revisado</summary>
+                    <pre>{{ selectedInvoiceImport.extractedJson }}</pre>
+                  </details>
+                }
+              } @else {
+                <p class="emptyState">Selecciona o sube una factura para iniciar la revision.</p>
+              }
+            </section>
+          </div>
+          </section>
+        }
+      </section>
+    }
+
+    @if (activeTab === 'suppliers') {
+      <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
+        <div class="panelHeader">
+          <div class="panelTitle">
+            <h2>Proveedores</h2>
+            <p>Datos de proveedores usados en facturas de entrada y compras de inventario.</p>
+          </div>
+
+          @if (hasPermission('suppliers.create')) {
+            <button type="button" class="primaryButton" (click)="openSupplierModal()">Crear proveedor</button>
+          }
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Proveedor</th>
+                <th>Categoria</th>
+                <th>Contacto</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (supplier of suppliers; track supplier.id) {
+                <tr>
+                  <td>
+                    <strong>{{ supplier.name }}</strong>
+                    <small>#{{ supplier.supplierNumber }} · {{ supplier.taxId || 'Sin NIT' }}</small>
+                  </td>
+                  <td>{{ supplier.categoryName || 'Sin categoría' }}</td>
+                  <td>
+                    <strong>{{ supplier.contactName || supplier.email || 'Sin contacto' }}</strong>
+                    <small>{{ supplier.phone || supplier.email || '' }}</small>
+                  </td>
+                  <td>{{ supplier.city || supplier.country || 'Sin ubicación' }}</td>
+                  <td>
+                    <span class="status" [class.off]="supplier.status !== 'Active'">
+                      {{ supplier.status === 'NeedsCompletion' ? 'Por completar' : (supplier.status === 'Active' ? 'Activo' : 'Inactivo') }}
+                    </span>
+                  </td>
+                  <td class="rowActions">
+                    @if (hasPermission('suppliers.update')) {
+                      <button type="button" (click)="editSupplier(supplier)" [disabled]="!!pendingAction">Editar</button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6">Todavía no hay proveedores. Al cargar una factura con proveedor nuevo se creará aquí como pendiente.</td>
                 </tr>
               }
             </tbody>
@@ -199,7 +738,7 @@
                 <tr>
                   <td>
                     <strong>{{ category.name }}</strong>
-                    <small>{{ category.description || 'Sin descripción' }}</small>
+                    <small>#{{ category.categoryNumber }} · {{ category.description || 'Sin descripción' }}</small>
                   </td>
                   <td>{{ category.slug }}</td>
                   <td>
@@ -287,26 +826,99 @@
     }
 
     @if (activeTab === 'images') {
-      <section class="workPanel uploadPanel" [class.isBusy]="isActionPending('uploadCategoryImages')">
+      <section class="workPanel uploadPanel" [class.isBusy]="isActionPending('uploadProductImages')">
         <div class="panelHeader">
           <div class="panelTitle">
-            <h2>Banco de imágenes por categoría</h2>
-            <p>Las imágenes se guardan en la API y quedan asociadas a la categoría seleccionada.</p>
+            <h2>Galería de imágenes por producto</h2>
+            <p>Selecciona categoría y producto para cargar la galería que se verá en el catálogo.</p>
           </div>
         </div>
 
         <div class="imageControls">
           <label>
             Categoría
-            <select
-              name="selectedImageCategoryId"
-              [(ngModel)]="selectedImageCategoryId"
-              (ngModelChange)="onImageCategoryChange()"
-            >
-              @for (category of categories; track category.id) {
-                <option [ngValue]="category.id">{{ category.name }}</option>
+            <div class="searchSelect" [class.open]="openImageSelector === 'category'">
+              <button
+                type="button"
+                class="searchSelectTrigger"
+                [attr.aria-expanded]="openImageSelector === 'category'"
+                (click)="toggleImageSelector('category')"
+              >
+                <span>{{ selectedImageCategoryLabel() }}</span>
+                <strong>⌄</strong>
+              </button>
+
+              @if (openImageSelector === 'category') {
+                <div class="searchSelectPanel" (click)="$event.stopPropagation()">
+                  <input
+                    type="search"
+                    name="imageCategorySearch"
+                    [(ngModel)]="imageCategorySearch"
+                    placeholder="Buscar por nombre, slug o #"
+                    autocomplete="off"
+                  >
+
+                  <div class="searchSelectOptions">
+                    @for (category of filteredImageCategories; track category.id) {
+                      <button
+                        type="button"
+                        [class.selected]="category.id === selectedImageCategoryId"
+                        (click)="selectImageCategory(category.id)"
+                      >
+                        <span>{{ category.name }}</span>
+                        <small>#{{ category.categoryNumber }} · {{ category.slug }}</small>
+                      </button>
+                    } @empty {
+                      <p>No hay coincidencias.</p>
+                    }
+                  </div>
+                </div>
               }
-            </select>
+            </div>
+            <small>{{ filteredImageCategories.length }} de {{ categories.length }} categorías visibles</small>
+          </label>
+
+          <label>
+            Producto
+            <div class="searchSelect" [class.open]="openImageSelector === 'product'">
+              <button
+                type="button"
+                class="searchSelectTrigger"
+                [attr.aria-expanded]="openImageSelector === 'product'"
+                (click)="toggleImageSelector('product')"
+              >
+                <span>{{ selectedImageProductLabel() }}</span>
+                <strong>⌄</strong>
+              </button>
+
+              @if (openImageSelector === 'product') {
+                <div class="searchSelectPanel" (click)="$event.stopPropagation()">
+                  <input
+                    type="search"
+                    name="imageProductSearch"
+                    [(ngModel)]="imageProductSearch"
+                    placeholder="Buscar por nombre, SKU o #"
+                    autocomplete="off"
+                  >
+
+                  <div class="searchSelectOptions">
+                    @for (product of filteredCategoryProducts; track product.id) {
+                      <button
+                        type="button"
+                        [class.selected]="product.id === selectedImageProductId"
+                        (click)="selectImageProduct(product.id)"
+                      >
+                        <span>{{ product.name }}</span>
+                        <small>#{{ product.productNumber }}{{ product.sku ? ' · ' + product.sku : '' }}</small>
+                      </button>
+                    } @empty {
+                      <p>No hay productos asociados que coincidan.</p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+            <small>{{ filteredCategoryProducts.length }} de {{ categoryProducts.length }} productos asociados visibles</small>
           </label>
 
           <label>
@@ -317,6 +929,62 @@
               placeholder="Ej: Detalle personalizado AMAS"
             >
           </label>
+        </div>
+
+        <div class="imageControls associateProductControls">
+          <label>
+            Asociar producto existente
+            <div class="searchSelect" [class.open]="openImageSelector === 'associate'">
+              <button
+                type="button"
+                class="searchSelectTrigger"
+                [attr.aria-expanded]="openImageSelector === 'associate'"
+                (click)="toggleImageSelector('associate')"
+              >
+                <span>{{ selectedAssociateProductLabel() }}</span>
+                <strong>⌄</strong>
+              </button>
+
+              @if (openImageSelector === 'associate') {
+                <div class="searchSelectPanel" (click)="$event.stopPropagation()">
+                  <input
+                    type="search"
+                    name="imageAssociateProductSearch"
+                    [(ngModel)]="imageAssociateProductSearch"
+                    placeholder="Buscar por nombre, SKU o #"
+                    autocomplete="off"
+                  >
+
+                  <div class="searchSelectOptions">
+                    @for (product of filteredAvailableProductsForSelectedImageCategory; track product.id) {
+                      <button
+                        type="button"
+                        [class.selected]="product.id === selectedImageAssociateProductId"
+                        (click)="selectAssociateProduct(product.id)"
+                      >
+                        <span>{{ product.name }}</span>
+                        <small>#{{ product.productNumber }}{{ product.sku ? ' · ' + product.sku : '' }}</small>
+                      </button>
+                    } @empty {
+                      <p>No hay productos disponibles que coincidan.</p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+            <small>
+              {{ filteredAvailableProductsForSelectedImageCategory.length }} de {{ availableProductsForSelectedImageCategory.length }} productos disponibles visibles
+            </small>
+          </label>
+
+          <button
+            type="button"
+            class="primaryButton"
+            (click)="associateSelectedProductToImageCategory()"
+            [disabled]="!selectedImageCategoryId || !selectedImageAssociateProductId || !!pendingAction"
+          >
+            {{ isActionPending('associateProductToCategory') ? 'Asociando...' : 'Asociar a categoría' }}
+          </button>
         </div>
 
         <div class="uploadGrid">
@@ -344,9 +1012,9 @@
             type="button"
             class="primaryButton"
             (click)="uploadImages()"
-            [disabled]="!selectedImageCategoryId || selectedImageFiles.length === 0 || !!pendingAction"
+            [disabled]="!selectedImageCategoryId || !selectedImageProductId || selectedImageFiles.length === 0 || !!pendingAction"
           >
-            {{ isActionPending('uploadCategoryImages') ? 'Cargando imágenes...' : 'Subir imágenes' }}
+            {{ isActionPending('uploadProductImages') ? 'Cargando imágenes...' : 'Subir imágenes' }}
           </button>
 
           @if (selectedImageFiles.length > 0) {
@@ -365,28 +1033,34 @@
 
         <section class="categoryImageSection">
           <div class="panelTitle">
-            <h3>Imágenes asociadas</h3>
-            <p>Lectura desde el endpoint de imágenes de la categoría seleccionada.</p>
+            <h3>Imágenes del producto</h3>
+            <p>El orden definido aquí será el orden usado por las cards del front.</p>
           </div>
 
-          @if (categoryImages.length > 0) {
+          @if (productImages.length > 0) {
             <div class="categoryImageGrid">
-              @for (image of categoryImages; track image.id) {
+              @for (image of productImages; track image.id; let index = $index) {
                 <article class="categoryImageCard">
-                  <img [src]="imageUrl(image)" [alt]="image.altText || image.fileName">
+                  <img [src]="productImageUrl(image)" [alt]="image.altText || image.fileName">
                   <div>
-                    <strong>{{ image.fileName }}</strong>
+                    <strong>{{ image.isPrimary ? 'Principal · ' : '' }}{{ image.fileName }}</strong>
                     <small>{{ image.contentType }} · {{ image.sizeBytes / 1024 | number:'1.0-0' }} KB</small>
+                  </div>
+                  <div class="imageCardActions">
+                    <button type="button" (click)="moveProductImage(image, -1)" [disabled]="index === 0 || !!pendingAction">Subir</button>
+                    <button type="button" (click)="moveProductImage(image, 1)" [disabled]="index === productImages.length - 1 || !!pendingAction">Bajar</button>
+                    <button type="button" (click)="setPrimaryProductImage(image)" [disabled]="image.isPrimary || !!pendingAction">Principal</button>
+                    <button type="button" class="dangerText" (click)="deleteProductImage(image)" [disabled]="!!pendingAction">Eliminar</button>
                   </div>
                 </article>
               }
             </div>
           } @else {
-            <p class="emptyState">Esta categoría todavía no tiene imágenes cargadas.</p>
+            <p class="emptyState">Este producto todavía no tiene imágenes cargadas.</p>
           }
         </section>
 
-        @if (isActionPending('uploadCategoryImages')) {
+        @if (isActionPending('uploadProductImages')) {
           <div class="panelLoading">
             <span class="spinner"></span>
             <strong>Subiendo imágenes...</strong>
@@ -397,6 +1071,36 @@
 
     @if (activeTab === 'users') {
       <section class="identityGrid">
+        <section class="workPanel identitySettings" [class.isBusy]="isActionPending('saveInactivityConfiguration')">
+          <div class="panelTitle">
+            <h2>Seguridad de sesión</h2>
+            <p>Configuración global para cerrar sesiones administrativas cuando no hay actividad.</p>
+          </div>
+
+          <form class="sessionSettings" (ngSubmit)="saveInactivityConfiguration()" #sessionNgForm="ngForm">
+            <label>
+              <span>Inactividad máxima</span>
+              <input
+                type="number"
+                min="5"
+                max="240"
+                name="inactivityMinutes"
+                [(ngModel)]="inactivityFormMinutes"
+                required
+              >
+              <small>Entre 5 y 240 minutos. Valor actual: {{ inactivityMinutes }} min.</small>
+            </label>
+
+            <button
+              type="submit"
+              class="primaryButton"
+              [disabled]="sessionNgForm.invalid || !!pendingAction"
+            >
+              {{ isActionPending('saveInactivityConfiguration') ? 'Guardando...' : 'Guardar tiempo' }}
+            </button>
+          </form>
+        </section>
+
         <section class="workPanel tablePanel" [class.isBusy]="!!pendingAction || loading">
           <div class="panelHeader">
             <div class="panelTitle">
@@ -404,7 +1108,9 @@
               <p>Administradores que podrán ingresar al dashboard con permisos por rol.</p>
             </div>
 
-            <button type="button" class="primaryButton" (click)="openUserModal()">Crear usuario</button>
+            @if (hasPermission('users.create')) {
+              <button type="button" class="primaryButton" (click)="openUserModal()">Crear usuario</button>
+            }
           </div>
 
           <div class="tableWrap">
@@ -413,6 +1119,7 @@
                 <tr>
                   <th>Usuario</th>
                   <th>Roles</th>
+                  <th>Menú</th>
                   <th>Estado</th>
                   <th></th>
                 </tr>
@@ -434,17 +1141,22 @@
                       </div>
                     </td>
                     <td>
+                      <small>{{ userMenuAccess(user) }}</small>
+                    </td>
+                    <td>
                       <span class="status" [class.off]="!user.isActive">
                         {{ user.isActive ? 'Activo' : 'Inactivo' }}
                       </span>
                     </td>
                     <td class="rowActions">
-                      <button type="button" (click)="editUser(user)" [disabled]="!!pendingAction">Editar</button>
+                      @if (hasPermission('users.update')) {
+                        <button type="button" (click)="editUser(user)" [disabled]="!!pendingAction">Editar</button>
+                      }
                     </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="4">Todavía no hay usuarios creados en base de datos.</td>
+                    <td colspan="5">Todavía no hay usuarios creados en base de datos.</td>
                   </tr>
                 }
               </tbody>
@@ -459,7 +1171,9 @@
               <p>Define grupos de permisos para controlar menús y acciones.</p>
             </div>
 
-            <button type="button" class="primaryButton" (click)="openRoleModal()">Crear rol</button>
+            @if (hasPermission('roles.create')) {
+              <button type="button" class="primaryButton" (click)="openRoleModal()">Crear rol</button>
+            }
           </div>
 
           <div class="tableWrap">
@@ -488,7 +1202,9 @@
                       </div>
                     </td>
                     <td class="rowActions">
-                      <button type="button" (click)="editRole(role)" [disabled]="!!pendingAction">Editar</button>
+                      @if (hasPermission('roles.update')) {
+                        <button type="button" (click)="editRole(role)" [disabled]="!!pendingAction">Editar</button>
+                      }
                     </td>
                   </tr>
                 } @empty {
@@ -593,6 +1309,157 @@
   </div>
 }
 
+@if (isInventoryItemModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel">
+      <div class="modalHeader">
+        <h2>{{ editingInventoryItemId ? 'Editar ítem de inventario' : 'Crear ítem de inventario' }}</h2>
+        <button
+          type="button"
+          class="iconButton"
+          (click)="closeInventoryItemModal()"
+          [disabled]="saving"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm" (ngSubmit)="saveInventoryItem()" #inventoryItemNgForm="ngForm">
+        <label>
+          Nombre
+          <input name="inventoryItemName" [(ngModel)]="inventoryItemForm.name" required>
+        </label>
+
+        <label>
+          SKU
+          <input name="inventoryItemSku" [(ngModel)]="inventoryItemForm.sku" required>
+        </label>
+
+        <label>
+          Tipo
+          <select name="inventoryItemType" [(ngModel)]="inventoryItemForm.type" required>
+            <option value="Product">Producto</option>
+            <option value="Supply">Insumo</option>
+            <option value="Element">Elemento</option>
+          </select>
+        </label>
+
+        <label>
+          Unidad
+          <input name="inventoryItemUnit" [(ngModel)]="inventoryItemForm.unit" required>
+        </label>
+
+        <label>
+          Producto asociado
+          <select name="inventoryItemProductId" [(ngModel)]="inventoryItemForm.productId">
+            <option [ngValue]="null">Sin producto asociado</option>
+            @for (product of products; track product.id) {
+              <option [ngValue]="product.id">{{ product.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          Imagen referencial
+          <input type="file" accept="image/*" (change)="selectInventoryItemImage($event)">
+        </label>
+
+        @if (selectedInventoryItemImagePreview) {
+          <div class="inventoryImagePreview">
+            <img [src]="selectedInventoryItemImagePreview" alt="Imagen referencial del ítem">
+            <small>Esta imagen es solo para identificación interna del Kardex.</small>
+          </div>
+        }
+
+        <label>
+          Stock mínimo
+          <input type="number" min="0" name="inventoryMinimumStock" [(ngModel)]="inventoryItemForm.minimumStock" required>
+        </label>
+
+        @if (!editingInventoryItemId) {
+          <label>
+            Stock inicial
+            <input type="number" min="0" name="inventoryInitialStock" [(ngModel)]="inventoryItemForm.initialStock" required>
+          </label>
+        }
+
+        <label class="inlineCheck">
+          <input type="checkbox" name="inventoryItemIsActive" [(ngModel)]="inventoryItemForm.isActive">
+          Ítem activo
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeInventoryItemModal()" [disabled]="saving">
+            Cancelar
+          </button>
+          <button type="submit" class="primaryButton" [disabled]="inventoryItemNgForm.invalid || saving">
+            {{ isActionPending('saveInventoryItem') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isInventoryMovementModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel small">
+      <div class="modalHeader">
+        <h2>{{ inventoryMovementForm.movementType === 'Entry' ? 'Registrar entrada' : 'Registrar salida' }}</h2>
+        <button
+          type="button"
+          class="iconButton"
+          (click)="closeInventoryMovementModal()"
+          [disabled]="saving"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm singleColumn" (ngSubmit)="saveInventoryMovement()" #inventoryMovementNgForm="ngForm">
+        <label>
+          Tipo de movimiento
+          <select name="inventoryMovementType" [(ngModel)]="inventoryMovementForm.movementType" required>
+            <option value="Entry">Entrada</option>
+            <option value="Exit">Salida</option>
+          </select>
+        </label>
+
+        <label>
+          Cantidad
+          <input type="number" min="0.01" step="0.01" name="inventoryMovementQuantity" [(ngModel)]="inventoryMovementForm.quantity" required>
+        </label>
+
+        <label>
+          Costo unitario
+          <input type="number" min="0" step="0.01" name="inventoryMovementUnitCost" [(ngModel)]="inventoryMovementForm.unitCost">
+        </label>
+
+        <label>
+          Motivo
+          <input name="inventoryMovementReason" [(ngModel)]="inventoryMovementForm.reason" placeholder="Compra, venta, ajuste">
+        </label>
+
+        <label>
+          Referencia
+          <input name="inventoryMovementReference" [(ngModel)]="inventoryMovementForm.reference" placeholder="Factura, orden, nota interna">
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeInventoryMovementModal()" [disabled]="saving">
+            Cancelar
+          </button>
+          <button type="submit" class="primaryButton" [disabled]="inventoryMovementNgForm.invalid || saving">
+            {{ isActionPending('saveInventoryMovement') ? 'Registrando...' : 'Registrar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
 @if (isCategoryModalOpen) {
   <div class="modalBackdrop">
     <section class="modalPanel small">
@@ -634,6 +1501,98 @@
           <button type="button" class="ghostButton" (click)="closeCategoryModal()" [disabled]="saving">Cancelar</button>
           <button type="submit" class="primaryButton" [disabled]="categoryNgForm.invalid || saving">
             {{ isActionPending('saveCategory') ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isSupplierModalOpen) {
+  <div class="modalBackdrop">
+    <section class="modalPanel">
+      <div class="modalHeader">
+        <h2>{{ editingSupplierId ? 'Editar proveedor' : 'Crear proveedor' }}</h2>
+        <button
+          type="button"
+          class="iconButton"
+          (click)="closeSupplierModal()"
+          [disabled]="saving"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <form class="adminForm" (ngSubmit)="saveSupplier()" #supplierNgForm="ngForm">
+        <label>
+          Nombre proveedor
+          <input name="supplierName" [(ngModel)]="supplierForm.name" required>
+        </label>
+
+        <label>
+          NIT / identificación
+          <input name="supplierTaxId" [(ngModel)]="supplierForm.taxId">
+        </label>
+
+        <label>
+          Categoría
+          <select name="supplierCategoryId" [(ngModel)]="supplierForm.categoryId">
+            <option [ngValue]="null">Sin categoría</option>
+            @for (category of categories; track category.id) {
+              <option [ngValue]="category.id">{{ category.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          Estado
+          <select name="supplierStatus" [(ngModel)]="supplierForm.status" required>
+            <option value="Active">Activo</option>
+            <option value="NeedsCompletion">Por completar</option>
+            <option value="Inactive">Inactivo</option>
+          </select>
+        </label>
+
+        <label>
+          Contacto
+          <input name="supplierContactName" [(ngModel)]="supplierForm.contactName">
+        </label>
+
+        <label>
+          Email
+          <input type="email" name="supplierEmail" [(ngModel)]="supplierForm.email">
+        </label>
+
+        <label>
+          Teléfono
+          <input name="supplierPhone" [(ngModel)]="supplierForm.phone">
+        </label>
+
+        <label>
+          Ciudad
+          <input name="supplierCity" [(ngModel)]="supplierForm.city">
+        </label>
+
+        <label>
+          País
+          <input name="supplierCountry" [(ngModel)]="supplierForm.country">
+        </label>
+
+        <label>
+          Dirección
+          <input name="supplierAddress" [(ngModel)]="supplierForm.address">
+        </label>
+
+        <label class="fullSpan">
+          Observaciones
+          <textarea name="supplierNotes" rows="4" [(ngModel)]="supplierForm.notes"></textarea>
+        </label>
+
+        <div class="modalActions">
+          <button type="button" class="ghostButton" (click)="closeSupplierModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="primaryButton" [disabled]="supplierNgForm.invalid || saving">
+            {{ saving ? 'Guardando...' : 'Guardar proveedor' }}
           </button>
         </div>
       </form>
@@ -723,14 +1682,38 @@
           >
         </label>
 
-        <label>
+        <div class="selectorField">
           Roles
-          <select name="userRoleIds" multiple [(ngModel)]="userForm.roleIds">
+          <div class="optionSelector">
             @for (role of roles; track role.id) {
-              <option [ngValue]="role.id">{{ role.name }}</option>
+              <label>
+                <input
+                  type="checkbox"
+                  [name]="'userRole_' + role.id"
+                  [checked]="userHasRole(role.id)"
+                  (change)="toggleUserRole(role.id, $event)"
+                >
+                <span>
+                  <strong>{{ role.name }}</strong>
+                  <small>{{ role.description || 'Sin descripción' }}</small>
+                </span>
+              </label>
+            } @empty {
+              <small>No hay roles disponibles.</small>
             }
-          </select>
-        </label>
+          </div>
+        </div>
+
+        <div class="selectorField">
+          Acceso al menú
+          <div class="accessPreview">
+            @for (menu of selectedUserMenuAccess(); track menu) {
+              <span>{{ menu }}</span>
+            } @empty {
+              <small>Selecciona al menos un rol para calcular los accesos.</small>
+            }
+          </div>
+        </div>
 
         <label class="inlineCheck">
           <input type="checkbox" name="userIsActive" [(ngModel)]="userForm.isActive">
@@ -766,17 +1749,41 @@
 
         <label>
           Descripción
-          <textarea name="roleDescription" rows="3" [(ngModel)]="roleForm.description"></textarea>
+          <input name="roleDescription" [(ngModel)]="roleForm.description">
         </label>
 
-        <label>
+        <div class="selectorField">
           Permisos
-          <select name="rolePermissionIds" multiple [(ngModel)]="roleForm.permissionIds">
+          <div class="optionSelector">
             @for (permission of permissions; track permission.id) {
-              <option [ngValue]="permission.id">{{ permission.code }} - {{ permission.description }}</option>
+              <label>
+                <input
+                  type="checkbox"
+                  [name]="'rolePermission_' + permission.id"
+                  [checked]="roleHasPermission(permission.id)"
+                  (change)="toggleRolePermission(permission.id, $event)"
+                >
+                <span>
+                  <strong>{{ permission.code }}</strong>
+                  <small>{{ permission.description }}</small>
+                </span>
+              </label>
+            } @empty {
+              <small>No hay permisos disponibles.</small>
             }
-          </select>
-        </label>
+          </div>
+        </div>
+
+        <div class="selectorField">
+          Menú permitido
+          <div class="accessPreview">
+            @for (menu of roleMenuAccess(); track menu) {
+              <span>{{ menu }}</span>
+            } @empty {
+              <small>Selecciona permisos para calcular el acceso al menú.</small>
+            }
+          </div>
+        </div>
 
         <div class="modalActions">
           <button type="button" class="ghostButton" (click)="closeRoleModal()" [disabled]="saving">Cancelar</button>

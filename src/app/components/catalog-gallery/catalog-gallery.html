@@ -8,7 +8,7 @@
 
       <label class="category-filter">
         <span>Categoria</span>
-        <select [(ngModel)]="selectedSlug" [disabled]="isLoading">
+        <select [(ngModel)]="selectedSlug" [disabled]="isLoading" (ngModelChange)="onCategoryChange()">
           <option value="all">Todos</option>
           @for (category of categories; track category.id) {
             <option [value]="category.slug">{{ category.name }}</option>
@@ -19,55 +19,126 @@
   }
 
   @if (isLoading) {
-    <div class="gallery-state">Cargando imagenes...</div>
+    <div class="gallery-state">Cargando productos...</div>
   } @else if (errorMessage) {
     <div class="gallery-state gallery-state--error">{{ errorMessage }}</div>
-  } @else if (!visibleImages.length) {
-    <div class="gallery-state">
-      Aun no hay imagenes publicadas para esta categoria.
-    </div>
+  } @else if (!visibleProducts.length) {
+    <div class="gallery-state">Aun no hay productos publicados para esta categoria.</div>
   } @else {
-    <div class="masonry-grid">
-      @for (item of visibleImages; track item.image.id; let index = $index) {
-        <article class="masonry-item" [class.tall]="index % 4 === 0" [class.medium]="index % 4 === 2">
-          <button class="image-open" type="button" (click)="openImage(item)" [attr.aria-label]="'Ampliar ' + imageTitle(item)">
-            <img [src]="item.sourceUrl" [alt]="imageTitle(item)" loading="lazy" />
+    <div class="product-grid">
+      @for (product of visibleProducts; track product.id) {
+        <article
+          class="product-card"
+          (mouseenter)="startImageRotation(product)"
+          (mouseleave)="stopImageRotation(product)"
+          (touchstart)="onTouchStart($event)"
+          (touchend)="onTouchEnd($event, product)"
+        >
+          <button
+            class="product-media"
+            type="button"
+            (click)="openProduct(product)"
+            [disabled]="imageFailed(product)"
+            [attr.aria-label]="'Ver producto ' + productTitle(product)"
+          >
+            @if (productImage(product) && !imageFailed(product)) {
+              <img
+                [src]="productImageUrl(product)"
+                [alt]="productImage(product)?.altText || product.name"
+                loading="lazy"
+                (error)="markImageAsFailed(product)"
+              />
+            } @else {
+              <span class="image-fallback">
+                <strong>{{ product.name }}</strong>
+                <small>Imagen no disponible</small>
+              </span>
+            }
           </button>
 
-          <div class="overlay">
-            <div class="content">
-              <span>{{ item.categoryName }}</span>
-              <h3>{{ imageTitle(item) }}</h3>
-
-              <a class="whatsapp-btn" [href]="whatsappUrl(item)" target="_blank" rel="noopener">
-                Quiero uno similar
-              </a>
-            </div>
+          <div class="product-body">
+            <span>{{ productCategoryName(product) }}</span>
+            <h3>{{ product.name }}</h3>
+            @if (product.price > 0) {
+              <strong class="price">{{ product.price | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+            }
+            <a class="whatsapp-btn" [href]="whatsappUrl(product)" target="_blank" rel="noopener">
+              Solicitar
+            </a>
           </div>
+
+          @if (product.images.length > 1) {
+            <div class="image-dots" aria-hidden="true">
+              @for (image of product.images; track image.id; let index = $index) {
+                <span [class.active]="(activeImageIndexes.get(product.id) ?? 0) === index"></span>
+              }
+            </div>
+          }
         </article>
       }
     </div>
   }
 </section>
 
-@if (selectedImage) {
-  <div class="image-modal" role="dialog" aria-modal="true" (click)="closeImage()">
+@if (selectedProduct) {
+  <div class="image-modal" role="dialog" aria-modal="true" (click)="closeProduct()">
     <div class="image-modal__panel" (click)="$event.stopPropagation()">
-      <button class="image-modal__close" type="button" aria-label="Cerrar imagen" (click)="closeImage()">
+      <button class="image-modal__close" type="button" aria-label="Cerrar producto" (click)="closeProduct()">
         x
       </button>
 
       <div class="image-modal__media">
-        <img [src]="selectedImage.sourceUrl" [alt]="imageTitle(selectedImage)" />
+        @if (productImage(selectedProduct)) {
+          <img [src]="productImageUrl(selectedProduct)" [alt]="activeImageText(selectedProduct)" />
+
+          @if (selectedProduct.images.length > 1) {
+            <button
+              class="modal-nav modal-nav--prev"
+              type="button"
+              aria-label="Imagen anterior"
+              (click)="previousImage(selectedProduct)"
+            >
+              ‹
+            </button>
+
+            <button
+              class="modal-nav modal-nav--next"
+              type="button"
+              aria-label="Imagen siguiente"
+              (click)="nextImage(selectedProduct)"
+            >
+              ›
+            </button>
+
+            <div class="modal-dots" aria-label="Imagen activa">
+              @for (image of selectedProduct.images; track image.id; let index = $index) {
+                <button
+                  type="button"
+                  [class.active]="(activeImageIndexes.get(selectedProduct.id) ?? 0) === index"
+                  [attr.aria-label]="'Ver imagen ' + (index + 1)"
+                  (click)="setActiveImage(selectedProduct, index)"
+                ></button>
+              }
+            </div>
+          }
+        } @else {
+          <span class="image-fallback">
+            <strong>{{ selectedProduct.name }}</strong>
+            <small>Imagen no disponible</small>
+          </span>
+        }
       </div>
 
       <div class="image-modal__content">
         <div>
-          <span>{{ selectedImage.categoryName }}</span>
-          <h3>{{ imageTitle(selectedImage) }}</h3>
+          <span>{{ productCategoryName(selectedProduct) }}</span>
+          <h3>{{ selectedProduct.name }}</h3>
+          @if (activeImageDescription(selectedProduct)) {
+            <p>{{ activeImageDescription(selectedProduct) }}</p>
+          }
         </div>
 
-        <a class="modal-whatsapp-btn" [href]="whatsappUrl(selectedImage)" target="_blank" rel="noopener">
+        <a class="modal-whatsapp-btn" [href]="whatsappUrl(selectedProduct)" target="_blank" rel="noopener">
           Solicitar asesoria por WhatsApp
         </a>
       </div>
