@@ -10,6 +10,7 @@ RUN npm run build -- --no-progress
 FROM nginx:1.27-alpine
 
 ENV AMAS_API_BASE_URL=https://apinet.amaslohaceposible.cloud/api/v1
+ENV AMAS_WHATSAPP_NUMBER=573216499629
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/landing-amas/browser /usr/share/nginx/html
@@ -17,6 +18,9 @@ COPY --from=build /app/dist/landing-amas/browser /usr/share/nginx/html
 RUN printf '%s\n' \
   '#!/bin/sh' \
   'set -eu' \
-  'echo "window.__AMAS_API_BASE_URL__=\"${AMAS_API_BASE_URL}\";" > /usr/share/nginx/html/runtime-config.js' \
+  'cat > /usr/share/nginx/html/runtime-config.js <<EOF' \
+  'window.__AMAS_API_BASE_URL__="${AMAS_API_BASE_URL}";' \
+  'window.__AMAS_WHATSAPP_NUMBER__="${AMAS_WHATSAPP_NUMBER}";' \
+  'EOF' \
   > /docker-entrypoint.d/99-amas-runtime-config.sh \
   && chmod +x /docker-entrypoint.d/99-amas-runtime-config.sh

@@ -1,5 +1,6 @@
 import { AfterViewInit, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { whatsappUrl } from '../../core/contact.config';
 
 @Component({
   selector: 'app-home',
@@ -7,26 +8,26 @@ import { RouterLink } from '@angular/router';
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class Home  implements AfterViewInit{
+export class Home implements AfterViewInit {
+  readonly whatsappUrl = whatsappUrl();
 
-
-
-ngAfterViewInit(): void {
+  ngAfterViewInit(): void {
     const elements = document.querySelectorAll('.reveal, .reveal-item');
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('show');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, {
-      threshold: 0.18
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('show');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.18,
+      },
+    );
 
     elements.forEach((el) => observer.observe(el));
   }
-
-
 }

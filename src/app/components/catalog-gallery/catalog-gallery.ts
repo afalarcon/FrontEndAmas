@@ -1,10 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, HostListener, Input, OnInit, inject } from '@angular/core';
+import {
+  AfterViewChecked,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  Input,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { CatalogService } from '../../core/catalog.service';
 import { CatalogCategory, CatalogProduct, CatalogProductImage } from '../../core/api.types';
+import { whatsappUrl } from '../../core/contact.config';
 
 @Component({
   selector: 'app-catalog-gallery',
@@ -12,17 +25,24 @@ import { CatalogCategory, CatalogProduct, CatalogProductImage } from '../../core
   templateUrl: './catalog-gallery.html',
   styleUrl: './catalog-gallery.css',
 })
-export class CatalogGallery implements OnInit {
+export class CatalogGallery implements OnInit, AfterViewChecked, OnDestroy {
   @Input() categorySlug: string | null = null;
   @Input() showFilter = false;
+  @ViewChild('loadMoreTrigger') private loadMoreTrigger?: ElementRef<HTMLElement>;
 
   private readonly catalogService = inject(CatalogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly failedProductIds = new Set<string>();
+  private readonly loadedImageIds = new Set<string>();
   private static readonly RotationIntervalMs = 1800;
+  private static readonly InitialProductLimit = 8;
+  private static readonly ProductBatchSize = 8;
   readonly activeImageIndexes = new Map<string, number>();
+  visibleProductLimit = CatalogGallery.InitialProductLimit;
   private hoverTimerId: number | null = null;
+  private loadMoreObserver: IntersectionObserver | null = null;
+  private observedLoadMoreElement: HTMLElement | null = null;
   private touchStartX = 0;
 
   categories: CatalogCategory[] = [];
@@ -35,6 +55,15 @@ export class CatalogGallery implements OnInit {
   ngOnInit(): void {
     this.selectedSlug = this.categorySlug ?? 'all';
     this.loadCatalog();
+  }
+
+  ngAfterViewChecked(): void {
+    this.observeLoadMoreTrigger();
+  }
+
+  ngOnDestroy(): void {
+    this.stopImageRotation();
+    this.loadMoreObserver?.disconnect();
   }
 
   get currentCategoryName(): string {
@@ -66,9 +95,16 @@ export class CatalogGallery implements OnInit {
     );
   }
 
+  get renderedProducts(): CatalogProduct[] {
+    return this.visibleProducts.slice(0, this.visibleProductLimit);
+  }
+
+  get hasMoreProducts(): boolean {
+    return this.visibleProductLimit < this.visibleProducts.length;
+  }
+
   onCategoryChange(): void {
-    this.failedProductIds.clear();
-    this.activeImageIndexes.clear();
+    this.resetGalleryState();
     this.loadProducts();
   }
 
@@ -105,7 +141,7 @@ export class CatalogGallery implements OnInit {
 
   whatsappUrl(product: CatalogProduct): string {
     const text = `Hola, quiero informacion sobre este producto: ${product.name}`;
-    return `https://wa.me/573216499629?text=${encodeURIComponent(text)}`;
+    return whatsappUrl(text);
   }
 
   openProduct(product: CatalogProduct): void {
@@ -208,8 +244,47 @@ export class CatalogGallery implements OnInit {
     return this.failedProductIds.has(product.id);
   }
 
+  imageLoaded(product: CatalogProduct): boolean {
+    const image = this.productImage(product);
+    return image ? this.loadedImageIds.has(image.id) : false;
+  }
+
+  markImageAsLoaded(product: CatalogProduct): void {
+    const image = this.productImage(product);
+    if (image) {
+      this.loadedImageIds.add(image.id);
+    }
+  }
+
   markImageAsFailed(product: CatalogProduct): void {
     this.failedProductIds.add(product.id);
+  }
+
+  imageLoadingMode(index: number): 'eager' | 'lazy' {
+    return index < 4 ? 'eager' : 'lazy';
+  }
+
+  imageFetchPriority(index: number): 'high' | 'auto' {
+    return index < 4 ? 'high' : 'auto';
+  }
+
+  loadMoreProducts(): void {
+    if (!this.hasMoreProducts) {
+      return;
+    }
+
+    this.visibleProductLimit = Math.min(
+      this.visibleProductLimit + CatalogGallery.ProductBatchSize,
+      this.visibleProducts.length,
+    );
+
+    if (!this.hasMoreProducts) {
+      this.loadMoreObserver?.disconnect();
+      this.loadMoreObserver = null;
+      this.observedLoadMoreElement = null;
+    }
+
+    this.changeDetector.detectChanges();
   }
 
   private loadCatalog(): void {
@@ -225,6 +300,7 @@ export class CatalogGallery implements OnInit {
         next: ({ categories, products }) => {
           this.categories = categories;
           this.products = products;
+          this.resetVisibleProducts();
 
           if (this.categorySlug && !categories.some((category) => category.slug === this.categorySlug)) {
             this.errorMessage = 'Esta categoria aun no tiene productos publicados.';
@@ -251,6 +327,7 @@ export class CatalogGallery implements OnInit {
       .subscribe({
         next: (products) => {
           this.products = products;
+          this.resetVisibleProducts();
           this.isLoading = false;
           this.changeDetector.detectChanges();
         },
@@ -270,5 +347,43 @@ export class CatalogGallery implements OnInit {
 
       return first.sortOrder - second.sortOrder;
     });
+  }
+
+  private resetGalleryState(): void {
+    this.failedProductIds.clear();
+    this.loadedImageIds.clear();
+    this.activeImageIndexes.clear();
+    this.resetVisibleProducts();
+  }
+
+  private resetVisibleProducts(): void {
+    this.visibleProductLimit = CatalogGallery.InitialProductLimit;
+    this.loadMoreObserver?.disconnect();
+    this.loadMoreObserver = null;
+    this.observedLoadMoreElement = null;
+  }
+
+  private observeLoadMoreTrigger(): void {
+    const element = this.loadMoreTrigger?.nativeElement;
+    if (
+      !element ||
+      !this.hasMoreProducts ||
+      this.observedLoadMoreElement === element ||
+      typeof IntersectionObserver === 'undefined'
+    ) {
+      return;
+    }
+
+    this.loadMoreObserver?.disconnect();
+    this.observedLoadMoreElement = element;
+    this.loadMoreObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          this.loadMoreProducts();
+        }
+      },
+      { rootMargin: '420px 0px' },
+    );
+    this.loadMoreObserver.observe(element);
   }
 }

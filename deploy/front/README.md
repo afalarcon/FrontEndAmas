@@ -8,6 +8,7 @@ Crear `.env` en la carpeta del front en el VPS:
 
 ```env
 AMAS_API_BASE_URL=https://api.amaslohaceposible.cloud/api/v1
+AMAS_WHATSAPP_NUMBER=573216499629
 ```
 
 ## Docker Compose
@@ -21,8 +22,8 @@ Para producción con Traefik, conectar el servicio `amas-front` a `traefik_proxy
 
 ## Runtime config
 
-`runtime-config.js` se genera al iniciar el contenedor con `AMAS_API_BASE_URL`.
-Esto evita recompilar el front si cambia el dominio de la API.
+`runtime-config.js` se genera al iniciar el contenedor con `AMAS_API_BASE_URL` y `AMAS_WHATSAPP_NUMBER`.
+Esto evita recompilar el front si cambia el dominio de la API o el número de WhatsApp.
 
 ## GitHub Actions
 
@@ -39,3 +40,4 @@ Variables opcionales:
 
 - `VPS_FRONT_DIR`, default `/opt/amas-front`
 - `AMAS_API_BASE_URL`, default `https://api.amaslohaceposible.cloud/api/v1`
+- `AMAS_WHATSAPP_NUMBER`, default `573216499629`

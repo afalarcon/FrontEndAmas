@@ -26,9 +26,10 @@
     <div class="gallery-state">Aun no hay productos publicados para esta categoria.</div>
   } @else {
     <div class="product-grid">
-      @for (product of visibleProducts; track product.id) {
+      @for (product of renderedProducts; track product.id; let index = $index) {
         <article
           class="product-card"
+          [class.product-card--ready]="imageLoaded(product)"
           (mouseenter)="startImageRotation(product)"
           (mouseleave)="stopImageRotation(product)"
           (touchstart)="onTouchStart($event)"
@@ -42,10 +43,19 @@
             [attr.aria-label]="'Ver producto ' + productTitle(product)"
           >
             @if (productImage(product) && !imageFailed(product)) {
+              @if (!imageLoaded(product)) {
+                <span class="image-loading" aria-hidden="true"></span>
+              }
               <img
                 [src]="productImageUrl(product)"
                 [alt]="productImage(product)?.altText || product.name"
-                loading="lazy"
+                width="400"
+                height="400"
+                decoding="async"
+                [attr.fetchpriority]="imageFetchPriority(index)"
+                [loading]="imageLoadingMode(index)"
+                [class.is-loaded]="imageLoaded(product)"
+                (load)="markImageAsLoaded(product)"
                 (error)="markImageAsFailed(product)"
               />
             } @else {
@@ -77,6 +87,14 @@
         </article>
       }
     </div>
+
+    @if (hasMoreProducts) {
+      <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    }
   }
 </section>
 
@@ -89,7 +107,12 @@
 
       <div class="image-modal__media">
         @if (productImage(selectedProduct)) {
-          <img [src]="productImageUrl(selectedProduct)" [alt]="activeImageText(selectedProduct)" />
+          <img
+            [src]="productImageUrl(selectedProduct)"
+            [alt]="activeImageText(selectedProduct)"
+            decoding="async"
+            fetchpriority="high"
+          />
 
           @if (selectedProduct.images.length > 1) {
             <button

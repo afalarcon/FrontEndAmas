@@ -2,6 +2,7 @@ import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ContactService } from '../../core/contact.service';
 import { ContactRequestPayload } from '../../core/api.types';
+import { whatsappUrl } from '../../core/contact.config';
 
 declare global {
   interface Window {
@@ -44,6 +45,7 @@ export class Footer implements AfterViewInit {
   readonly turnstileSiteKey = typeof window === 'undefined' ? '' : window.__AMAS_TURNSTILE_SITE_KEY__?.trim() ?? '';
   readonly hasCaptcha = Boolean(this.turnstileSiteKey);
   readonly minMessageLength = 15;
+  readonly whatsappUrl = whatsappUrl('Hola, quiero más información sobre sus productos');
 
   contactForm = this.emptyContactForm();
   contactStatus: ContactStatus = 'idle';
