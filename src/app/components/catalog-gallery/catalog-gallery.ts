@@ -33,7 +33,7 @@ export class CatalogGallery implements OnInit, AfterViewChecked, OnDestroy {
   private readonly catalogService = inject(CatalogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly changeDetector = inject(ChangeDetectorRef);
-  private readonly failedProductIds = new Set<string>();
+  private readonly failedImageIds = new Set<string>();
   private readonly loadedImageIds = new Set<string>();
   private static readonly RotationIntervalMs = 1800;
   private static readonly InitialProductLimit = 8;
@@ -109,7 +109,7 @@ export class CatalogGallery implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   productImage(product: CatalogProduct): CatalogProductImage | null {
-    const images = this.sortedImages(product);
+    const images = this.availableImages(product);
     if (images.length === 0) {
       return null;
     }
@@ -241,7 +241,7 @@ export class CatalogGallery implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   imageFailed(product: CatalogProduct): boolean {
-    return this.failedProductIds.has(product.id);
+    return this.sortedImages(product).length > 0 && this.availableImages(product).length === 0;
   }
 
   imageLoaded(product: CatalogProduct): boolean {
@@ -257,7 +257,19 @@ export class CatalogGallery implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   markImageAsFailed(product: CatalogProduct): void {
-    this.failedProductIds.add(product.id);
+    const image = this.productImage(product);
+    if (!image) {
+      return;
+    }
+
+    this.failedImageIds.add(image.id);
+    this.loadedImageIds.delete(image.id);
+
+    if (this.availableImages(product).length > 0) {
+      this.activeImageIndexes.set(product.id, 0);
+    }
+
+    this.changeDetector.detectChanges();
   }
 
   imageLoadingMode(index: number): 'eager' | 'lazy' {
@@ -349,8 +361,12 @@ export class CatalogGallery implements OnInit, AfterViewChecked, OnDestroy {
     });
   }
 
+  private availableImages(product: CatalogProduct): CatalogProductImage[] {
+    return this.sortedImages(product).filter((image) => !this.failedImageIds.has(image.id));
+  }
+
   private resetGalleryState(): void {
-    this.failedProductIds.clear();
+    this.failedImageIds.clear();
     this.loadedImageIds.clear();
     this.activeImageIndexes.clear();
     this.resetVisibleProducts();
