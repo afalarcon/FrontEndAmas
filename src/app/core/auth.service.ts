@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { map, tap } from 'rxjs';
+import { catchError, map, throwError, tap } from 'rxjs';
 import { API_BASE_URL } from './api.config';
 import { ApiResponse, LoginResponse } from './api.types';
 
@@ -46,6 +46,7 @@ export class AuthService {
           localStorage.setItem(EXPIRES_KEY, session.expiresAt);
           this.tokenState.set(session.accessToken);
         }),
+        catchError((error) => this.handleLoginError(error)),
       );
   }
 
@@ -99,5 +100,29 @@ export class AuthService {
     } catch {
       return [];
     }
+  }
+
+  private handleLoginError(error: unknown) {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 429) {
+        return throwError(
+          () => new Error('Demasiados intentos de ingreso. Espera un momento e intenta de nuevo.'),
+        );
+      }
+
+      const apiError = error.error as Partial<ApiResponse<unknown>> | string | null;
+
+      if (apiError && typeof apiError === 'object' && apiError.error === 'Invalid credentials.') {
+        return throwError(() => new Error('Credenciales inválidas.'));
+      }
+
+      return throwError(() => new Error('No fue posible iniciar sesión. Intenta de nuevo.'));
+    }
+
+    if (error instanceof Error && error.message && !error.message.includes('Http failure response')) {
+      return throwError(() => error);
+    }
+
+    return throwError(() => new Error('No fue posible iniciar sesión. Intenta de nuevo.'));
   }
 }

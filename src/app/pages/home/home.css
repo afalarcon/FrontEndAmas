@@ -150,14 +150,35 @@ h2::after {
 
 .float-card {
   position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,.88);
   backdrop-filter: blur(12px);
   color: #68172f;
   padding: 16px 22px;
   border-radius: 22px;
   font-weight: 900;
+  text-decoration: none;
   box-shadow: 0 15px 35px rgba(91, 16, 40, .15);
   border: 1px solid rgba(255,255,255,.7);
+  cursor: pointer;
+  transition:
+    background .25s ease,
+    box-shadow .25s ease,
+    color .25s ease;
+}
+
+.float-card:hover,
+.float-card:focus-visible {
+  background: white;
+  color: #9d234a;
+  box-shadow: 0 20px 42px rgba(91, 16, 40, .2);
+}
+
+.float-card:focus-visible {
+  outline: 3px solid #e45f91;
+  outline-offset: 5px;
 }
 
 .card-1 {

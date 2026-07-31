@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: amas-front
     environment:
-      AMAS_API_BASE_URL: ${AMAS_API_BASE_URL:-https://api.amaslohaceposible.cloud/api/v1}
+      AMAS_API_BASE_URL: ${AMAS_API_BASE_URL:-https://apinet.amaslohaceposible.cloud/api/v1}
+      AMAS_WHATSAPP_NUMBER: ${AMAS_WHATSAPP_NUMBER:-573233550913}
     ports:
       - "4200:80"
     networks:

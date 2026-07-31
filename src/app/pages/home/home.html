@@ -12,7 +12,7 @@
     </p>
 
     <div class="hero-actions">
-      <a class="btn-primary" href="https://wa.me/57TU_NUMERO" target="_blank">
+      <a class="btn-primary" [href]="whatsappUrl" target="_blank" rel="noopener">
         Cuentanos tu idea
       </a>
 
@@ -25,17 +25,17 @@
   <div class="hero-collage">
     <img class="main-img" src="/images/banner.jpg" alt="Producto personalizado AMAS" />
 
-    <div class="float-card card-1">
+    <a class="float-card card-1" routerLink="/catalogo" aria-label="Ver catálogo de diseños personalizados">
       ✨ Diseño personalizado
-    </div>
+    </a>
 
-    <div class="float-card card-2">
+    <a class="float-card card-2" routerLink="/catalogo" aria-label="Ver catálogo de productos hechos con amor">
       🎁 Hecho con amor
-    </div>
+    </a>
 
-    <div class="float-card card-3">
+    <a class="float-card card-3" routerLink="/catalogo" aria-label="Ver catálogo de productos hechos para ti">
       ❤️ Hecho para ti
-    </div>
+    </a>
   </div>
 </section>
 
