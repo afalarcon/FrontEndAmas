@@ -8,7 +8,7 @@ Crear `.env` en la carpeta del front en el VPS:
 
 ```env
 AMAS_API_BASE_URL=https://api.amaslohaceposible.cloud/api/v1
-AMAS_WHATSAPP_NUMBER=573216499629
+AMAS_WHATSAPP_NUMBER=573233550913
 ```
 
 ## Docker Compose
@@ -40,4 +40,4 @@ Variables opcionales:
 
 - `VPS_FRONT_DIR`, default `/opt/amas-front`
 - `AMAS_API_BASE_URL`, default `https://api.amaslohaceposible.cloud/api/v1`
-- `AMAS_WHATSAPP_NUMBER`, default `573216499629`
+- `AMAS_WHATSAPP_NUMBER`, default `573233550913`

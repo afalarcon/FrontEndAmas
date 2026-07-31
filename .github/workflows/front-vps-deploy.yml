@@ -55,7 +55,7 @@ jobs:
       VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
       VPS_FRONT_DIR: ${{ vars.VPS_FRONT_DIR || '/opt/amas-front' }}
       AMAS_API_BASE_URL: ${{ vars.AMAS_API_BASE_URL || 'https://apinet.amaslohaceposible.cloud/api/v1' }}
-      AMAS_WHATSAPP_NUMBER: ${{ secrets.AMAS_WHATSAPP_NUMBER || vars.AMAS_WHATSAPP_NUMBER || '573216499629' }}
+      AMAS_WHATSAPP_NUMBER: ${{ secrets.AMAS_WHATSAPP_NUMBER || vars.AMAS_WHATSAPP_NUMBER || '573233550913' }}
 
     steps:
       - name: Checkout

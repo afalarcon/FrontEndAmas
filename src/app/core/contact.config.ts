@@ -4,7 +4,7 @@ declare global {
   }
 }
 
-const defaultWhatsappNumber = '573216499629';
+const defaultWhatsappNumber = '573233550913';
 
 const runtimeWhatsappNumber =
   typeof window === 'undefined' ? '' : window.__AMAS_WHATSAPP_NUMBER__?.trim() ?? '';
